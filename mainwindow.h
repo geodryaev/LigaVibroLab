@@ -7,8 +7,9 @@
 #include <QFileDialog>
 #include <QFile>
 #include <QVector>
-#include "vibrodata.h"
 
+#include "vibrodata.h"
+#include "report.h"
 
 namespace Ui {
 class MainWindow;
@@ -25,6 +26,7 @@ public:
 private:
     Ui::MainWindow *ui;
     vibroData date;
+    Report report;
 
 private slots:
     void ChangeAmplutude(int index);

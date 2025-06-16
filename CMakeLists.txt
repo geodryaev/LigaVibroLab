@@ -8,8 +8,11 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
+
 # Убедись, что путь к Qt 6 правильно указан через CMAKE_PREFIX_PATH при вызове cmake
 find_package(Qt5 REQUIRED COMPONENTS Core Widgets Network)
+
+add_subdirectory(QXlsx)
 
 add_executable(VibroProcessing
     main.cpp
@@ -20,6 +23,8 @@ add_executable(VibroProcessing
     vibrodata.h
 
     mainwindow.ui
+    report.h
+    report.cpp
 )
 
 target_compile_definitions(VibroProcessing PRIVATE
@@ -30,9 +35,10 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+#target_include_directories(VibroProcessing PRIVATE QXlsx)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /DEBUG")
 
 
-target_link_libraries(VibroProcessing PRIVATE Qt5::Core Qt5::Gui Qt5::Widgets)
+target_link_libraries(VibroProcessing PRIVATE Qt5::Core Qt5::Gui Qt5::Widgets QXlsx)

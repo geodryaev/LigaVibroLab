@@ -101,21 +101,43 @@ double stepVibro::get(int choise)
 
 void vibroData::cropAdjustment()
 {
-    bool isChanges = false;
-    int meridian = processedSteps.size() / 2 ;
-    frequency = processedSteps[meridian].get(0) - processedSteps[meridian].get(0);
-    for (int i = 0 ; i < processedSteps.size() - 1; i++)
+    frequency = 0;
+    int count = 0;
+    for (int i = processedStepsUP.size() - 1 ; i > 0 ; i--)
     {
-        if (processedSteps[i].get(0)-processedSteps[i+1].get(0) < meridian - delta ||processedSteps[i].get(0)-processedSteps[i+1].get(0) > meridian +  delta)
-            {
-                processedSteps.remove(i);
-                isChanges = true;
-                break;
-            }
-    }
-    if (isChanges)
-        cropAdjustment();
+        if (processedStepsUP[i].get(1) < maxPresure * 0.95)
+        {
+            processedStepsUP.remove(i);
+        }
 
+    }
+
+    for (int i = processedStepsUP.size() - 1 ; i > 0 ; i--)
+    {
+
+        frequency += processedStepsUP[i].get(0)- processedStepsUP[i-1].get(0);
+        count++;
+
+    }
+
+
+    frequency /=count;
+    for (int i = processedStepsUP.size() - 1 ; i > 0 ; i--)
+    {
+        if (processedStepsUP[i].get(0) - processedStepsUP[i-1].get(0) < frequency * 0.6 || processedStepsUP[i].get(0) - processedStepsUP[i-1].get(0) > frequency * 1.4)
+            processedStepsUP.remove(i);
+    }
+    frequency=0;
+    count = 0;
+    for (int i = processedStepsUP.size() - 1 ; i > 0 ; i--)
+    {
+
+        frequency += processedStepsUP[i].get(0)- processedStepsUP[i-1].get(0);
+        count++;
+
+    }
+    frequency /=count;
+    frequency = 1/ (frequency * 60);
     return;
 }
 
@@ -130,11 +152,63 @@ void vibroData::push(double time, double verticalPresure_KPA,
 }
 
 void vibroData::normalizeData() {
+    int countSteps = 0;
     for (int i = 1; i < steps.size() - 1; i++) {
-        if (steps[i + 1].get(1) < steps[i].get(1) &&
-            steps[i - 1].get(1) < steps[i].get(1))
+        if (steps[i + 1].get(1) < steps[i].get(1) && steps[i - 1].get(1) < steps[i].get(1))
             if (cheackpointMax(i, 4))
-                processedSteps.append(steps[i]);
+            {
+                qDebug() << steps[i - 1].get(1) << "--" << steps[i].get(1) << steps[i + 1].get(1);
+                processedStepsUP.append(steps[i]);
+                maxPresure += steps[i].get(1);
+                countSteps++;
+            }
+
+        if (steps[i + 1].get(1) > steps[i].get(1) && steps[i - 1].get(1) > steps[i].get(1))
+            if (cheackpointMin(i, 4))
+            {
+                qDebug() << steps[i - 1].get(1) << "--" << steps[i].get(1) << steps[i + 1].get(1);
+                processedStepsDown.append(steps[i]);
+            }
     }
+
+
+    maxPresure /= countSteps;
     cropAdjustment();
+}
+
+bool vibroData::cheackpointMax(int index, int countPoint) {
+    if (index + countPoint > steps.size() - 1 || index - countPoint < 0) {
+        return false;
+    }
+
+    while (countPoint) {
+        if (steps[index].get(1) > steps[index + countPoint].get(1) &&
+            steps[index].get(1) > steps[index - countPoint].get(1)) {
+            countPoint--;
+        } else {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool vibroData::cheackpointMin(int index, int countPoint)
+{
+    if (index + countPoint > steps.size() - 1 || index - countPoint < 0)
+    {
+        return false;
+    }
+
+    while (countPoint) {
+        if (steps[index].get(1) < steps[index + countPoint].get(1) && steps[index].get(1) < steps[index - countPoint].get(1))
+        {
+            countPoint--;
+        } else
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
