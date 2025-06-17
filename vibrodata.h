@@ -19,6 +19,9 @@ private:
     double m_poreVolume_mm3;
     int m_mode;
     int m_step;
+
+    double sigma1_;
+    double sigma3_;
 public:
     stepVibro();
     stepVibro(double time, double verticalPresure_KPA,
@@ -69,6 +72,10 @@ public:
               int mode);
 
     void normalizeData();
+    QVector<int> getData(int choice)
+    {
+
+    }
 };
 
 

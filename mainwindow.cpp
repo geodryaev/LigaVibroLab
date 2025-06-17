@@ -87,6 +87,6 @@ void MainWindow::on_calculateVibro_clicked()
     }
     date.normalizeData();
 
-    report.reportToFileExcel();
+    report.reportToFileExcel(date);
     qDebug() << 1;
 }
