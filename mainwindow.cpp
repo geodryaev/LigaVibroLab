@@ -12,15 +12,17 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     setFixedSize(800,600);
-    ui->frequency->setSuffix(" Гц.");
-    ui->frequency->setValue(0.5);
-    ui->frequency->setRange(0.01,10);
-    ui->frequency->setSingleStep(0.05);
-    ui->typeAmplitude->addItem("По контролю напряжения");
-    ui->typeAmplitude->addItem("По контролю деформации");
-    ui->typeAmplitude->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    setAmplitudeStress(ui->amplitude);
-    connect(ui->typeAmplitude,QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::ChangeAmplutude);
+    date = new vibroData(ui->height->value(),ui->diametrs->value());
+
+    // ui->frequency->setSuffix(" Гц.");
+    // ui->frequency->setValue(0.5);
+    // ui->frequency->setRange(0.01,10);
+    // ui->frequency->setSingleStep(0.05);
+    // ui->typeAmplitude->addItem("По контролю напряжения");
+    // ui->typeAmplitude->addItem("По контролю деформации");
+    // ui->typeAmplitude->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    // // setAmplitudeStress(ui->amplitude);
+    // connect(ui->typeAmplitude,QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::ChangeAmplutude);
 
 }
 
@@ -28,11 +30,11 @@ void MainWindow::ChangeAmplutude(int index)
 {
     if (index == 0 )
     {
-        setAmplitudeStress(ui->amplitude);
+        // setAmplitudeStress(ui->amplitude);
     }
     else if (index == 1)
     {
-        setAmplitudeDeform(ui->amplitude);
+        // setAmplitudeDeform(ui->amplitude);
     }
 }
 
@@ -59,6 +61,8 @@ MainWindow::~MainWindow()
 void MainWindow::on_calculateVibro_clicked()
 {
     bool hat = true;
+    bool u0read = true;
+    double u0;
     QString str;
     QStringList list;
     QString filePath = QFileDialog::getOpenFileName();
@@ -68,6 +72,7 @@ void MainWindow::on_calculateVibro_clicked()
         if(file.open(QIODevice::ReadOnly | QIODevice::Text))
         {
             QTextStream stream(&file);
+            int count = 0;
             while (!stream.atEnd())
             {
                 str = stream.readLine();
@@ -75,7 +80,13 @@ void MainWindow::on_calculateVibro_clicked()
                 list = str.split('\t');
                 if (!hat)
                 {
-                    date.push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble());
+                    if (u0read)
+                    {
+                        u0read = false;
+                        u0 = list[6].toDouble();
+                    }
+                    date->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
+
                 }
                 else
                 {
@@ -85,8 +96,14 @@ void MainWindow::on_calculateVibro_clicked()
             qDebug() << Q_FUNC_INFO;
         }
     }
-    date.normalizeData();
-
+    date->normalizeData();
     report.reportToFileExcel(date);
     qDebug() << 1;
 }
+
+void MainWindow::on_action_triggered()
+{
+    calcAmplitud * w = new calcAmplitud();
+    w->show();
+}
+

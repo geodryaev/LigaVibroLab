@@ -10,7 +10,7 @@
 
 #include "vibrodata.h"
 #include "report.h"
-
+#include "calcamplitud.h"
 namespace Ui {
 class MainWindow;
 }
@@ -25,13 +25,16 @@ public:
     //vibroData date;
 private:
     Ui::MainWindow *ui;
-    vibroData date;
+    vibroData *date;
     Report report;
+    double diametrs;
+    double height;
 
 private slots:
     void ChangeAmplutude(int index);
     void on_calculateVibro_clicked();
 
+    void on_action_triggered();
 };
 
 

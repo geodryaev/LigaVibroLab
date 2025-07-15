@@ -4,78 +4,49 @@
 #include <QVector>
 #include <QDebug>
 
-class stepVibro
-{
-private:
-    double m_time;
-    double m_verticalPresure_kPa;
-    double m_shearPresure_kPa;
-    double m_cellPressure_kPa;
-    double m_porePresure_KPA;
-    double m_porePressureAux_kPA;
-    double m_verticalDeform_mm;
-    double m_shearDeform_mm;
-    double m_cellVolume_mm3;
-    double m_poreVolume_mm3;
-    int m_mode;
-    int m_step;
+#include "stepvibro.h"
 
-    double sigma1_;
-    double sigma3_;
-public:
-    stepVibro();
-    stepVibro(double time, double verticalPresure_KPA,
-              double shearPresure_KPA, double cellPressure_KPA,
-              double porePresure_KPA,double porePressureAux_kPA,
-              double verticalDeform_mm, double m_shearDeform_mm,
-              double cellVolume_mm3, double poreVolume_mm3,
-              int mode);
-    ~stepVibro()
-    {
-        // qDebug() << "Destruction stepVibro";
-    }
-    void edit(int choise, double value);
-    double get(int choise);
-};
 
 class vibroData
 {
 private:
-    QVector<stepVibro> steps;
+
     QVector<stepVibro> processedStepsUP;
     QVector<stepVibro> processedStepsDown;
 
     QVector<double> buffer;
 
     double frequency;
-    double maxPresure = 0;
+    double maxPressure = 0;
+    double height;
+    double diametrs;
     const double delta = 0.001; // Разрешение погрешности при удалении подстройки (УСЛОВИЕ КОГДА ПОДСТРОЙКА СРАБОТАЛА)
 
 
     void cropAdjustment();
-    bool cheackpointMax(int index, int countPoint);
+    bool cheackPointMax(int index, int countPoint);
     bool cheackpointMin(int index, int countPoint);
 
-public:
-    vibroData()
-    {
+    /*
+     * Создание истины ??
+     */
 
-    }
+public:
+
+    QVector<stepVibro> steps;
+    vibroData(double height, double diametrs);
     ~vibroData(){
             // qDebug() << "Destruction vibroData";
     }
-    void push (double time, double verticalPresure_KPA,
-              double shearPresure_KPA, double cellPressure_KPA,
-              double porePresure_KPA,double porePressureAux_kPA,
+    void push (double time, double verticalPressure_KPA,
+              double shearPressure_KPA, double cellPressure_KPA,
+              double porePressure_KPA,double porePressureAux_kPA,
               double verticalDeform_mm, double shearDeform_mm,
               double cellVolume_mm3, double poreVolume_mm3,
-              int mode);
+              int mode, double u0);
 
     void normalizeData();
-    QVector<int> getData(int choice)
-    {
 
-    }
 };
 
 
