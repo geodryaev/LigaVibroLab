@@ -7,10 +7,12 @@
 #include <QFileDialog>
 #include <QFile>
 #include <QVector>
+#include <QStringList>
+#include <QMessageBox>
 
 #include "vibrodata.h"
 #include "report.h"
-#include "calcamplitud.h"
+
 namespace Ui {
 class MainWindow;
 }
@@ -25,18 +27,16 @@ public:
     //vibroData date;
 private:
     Ui::MainWindow *ui;
-    vibroData *date;
+    vibroData *data;
     Report report;
     double diametrs;
     double height;
 
 private slots:
-    void ChangeAmplutude(int index);
     void on_calculateVibro_clicked();
 
     void on_action_triggered();
+    void on_calculateVibro_2_clicked();
 };
-
-
 
 #endif // MAINWINDOW_H

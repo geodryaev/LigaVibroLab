@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
+#set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
 set(QWT_INCLUDE_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/include")
 set(QWT_LIBRARY_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/lib")
@@ -37,6 +39,7 @@ add_executable(VibroProcessing
     calcamplitud.h
     calcamplitud.cpp
     calcamplitud.ui
+    correctinput.h correctinput.cpp correctinput.ui
 )
 
 target_compile_definitions(VibroProcessing PRIVATE
@@ -54,7 +57,7 @@ target_link_directories(VibroProcessing PRIVATE ${QWT_LIBRARY_DIR})
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /DEBUG")
-
+#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi /Od")
 
 target_link_libraries(VibroProcessing PRIVATE
     Qt6::Core

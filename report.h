@@ -18,16 +18,17 @@
 #include <QVector>
 #include <qwt/qwt_plot.h>
 #include <qwt/qwt_plot_curve.h>
+#include <qwt/qwt_plot_grid.h>
+#include <cmath>
 
 #include "vibrodata.h"
-#include "stepvibro.h"
 
 class Report
 {
 public:
     Report();
-    void reportToFileExcel(vibroData* data);
-
+    void reportToFileExcelVibrocell(const vibroData* data);
+    void reportToFileExcelSeismic(const vibroData* data);
 private:
     int width;
     int height;

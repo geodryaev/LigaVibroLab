@@ -1,45 +1,19 @@
 #include "vibrodata.h"
 
-void vibroData::cropAdjustment()
+void vibroData::setNumberPoints()
 {
-    frequency = 0;
-    int count = 0;
-    for (int i = processedStepsUP.size() - 1 ; i > 0 ; i--)
+    int numTact  = 0;
+    for (QVector<stepVibro>::Iterator it = steps.begin(); it != steps.end(); it++)
     {
-        if (processedStepsUP[i].m_verticalPressure_kPa < maxPressure * 0.95)
+        if (it->numberTact != -1)
         {
-            processedStepsUP.remove(i);
+            numTact = it->numberTact;
         }
-
+        else
+        {
+            it->numberTact = numTact;
+        }
     }
-
-    for (int i = processedStepsUP.size() - 1 ; i > 0 ; i--)
-    {
-
-        frequency += processedStepsUP[i].m_time- processedStepsUP[i-1].m_time;
-        count++;
-
-    }
-
-
-    frequency /=count;
-    for (int i = processedStepsUP.size() - 1 ; i > 0 ; i--)
-    {
-        if (processedStepsUP[i].m_time - processedStepsUP[i-1].m_time < frequency * 0.6 || processedStepsUP[i].m_time - processedStepsUP[i-1].m_time > frequency * 1.4)
-            processedStepsUP.remove(i);
-    }
-    frequency=0;
-    count = 0;
-    for (int i = processedStepsUP.size() - 1 ; i > 0 ; i--)
-    {
-
-        frequency += processedStepsUP[i].m_time- processedStepsUP[i-1].m_time;
-        count++;
-
-    }
-    frequency /=count;
-    frequency = 1/ (frequency * 60);
-    return;
 }
 
 vibroData::vibroData(double height, double diametrs)
@@ -56,72 +30,113 @@ void vibroData::push(double time, double verticalPressure_KPA,
                      double cellVolume_mm3, double poreVolume_mm3,
                      int mode, double u0)
 {
-    steps.append(stepVibro(time,verticalPressure_KPA,shearPressure_KPA,cellPressure_KPA,porePressure_KPA,porePressureAux_kPA,verticalDeform_mm, shearDeform_mm,cellVolume_mm3, poreVolume_mm3, mode, u0, height));
+    steps.append(stepVibro(time,verticalPressure_KPA,shearPressure_KPA,cellPressure_KPA,porePressure_KPA,porePressureAux_kPA,verticalDeform_mm, shearDeform_mm,cellVolume_mm3, poreVolume_mm3, mode, u0, height, diametrs));
     steps[steps.size()-1].calc();
 }
 
-void vibroData::normalizeData() {
-    int countSteps = 0;
-    for (int i = 1; i < steps.size() - 1; i++) {
-        if (steps[i + 1].m_verticalPressure_kPa < steps[i].m_verticalPressure_kPa && steps[i - 1].m_verticalPressure_kPa < steps[i].m_verticalPressure_kPa)
-            if (cheackPointMax(i, 4))
-            {
-                qDebug() << steps[i - 1].m_verticalPressure_kPa << "--" << steps[i].m_verticalPressure_kPa << steps[i + 1].m_verticalPressure_kPa;
-                processedStepsUP.append(steps[i]);
-                maxPressure += steps[i].m_verticalPressure_kPa;
-                countSteps++;
-            }
-
-        if (steps[i + 1].m_verticalPressure_kPa > steps[i].m_verticalPressure_kPa && steps[i - 1].m_verticalPressure_kPa > steps[i].m_verticalPressure_kPa)
-            if (cheackpointMin(i, 4))
-            {
-                qDebug() << steps[i - 1].m_verticalPressure_kPa << "--" << steps[i].m_verticalPressure_kPa << steps[i + 1].m_verticalPressure_kPa;
-                processedStepsDown.append(steps[i]);
-            }
-    }
-
-
-    maxPressure /= countSteps;
-    cropAdjustment();
-}
-
-bool vibroData::cheackPointMax(int index, int countPoint) {
-    if (index + countPoint > steps.size() - 1 || index - countPoint < 0) {
-        return false;
-    }
-
-    while (countPoint) {
-        if (steps[index].m_verticalPressure_kPa > steps[index + countPoint].m_verticalPressure_kPa &&
-            steps[index].m_verticalPressure_kPa > steps[index - countPoint].m_verticalPressure_kPa) {
-            countPoint--;
-        } else {
-            return false;
-        }
-    }
-    steps[index].isUp=true;
-    return true;
-}
-
-bool vibroData::cheackpointMin(int index, int countPoint)
+void vibroData::normalizeData()
 {
-    if (index + countPoint > steps.size() - 1 || index - countPoint < 0)
-    {
-        return false;
-    }
+    double windows = 1 / frequency / 60 *1.05;
+    int countCicle = 1;
+    QVector<stepVibro>::Iterator it = steps.begin();
+    QVector<stepVibro>::Iterator min = steps.begin();
+    QVector<stepVibro>::Iterator max = steps.begin();
+    QVector<stepVibro>::Iterator point;
 
-    while (countPoint) {
-        if (steps[index].m_verticalPressure_kPa < steps[index + countPoint].m_verticalPressure_kPa && steps[index].m_verticalPressure_kPa < steps[index - countPoint].m_verticalPressure_kPa)
+    steps.begin()->isDown = true;
+    steps.begin()->isUp = true;
+    steps.begin()->numberTact = 0;
+    minPoints.append(steps.begin());
+    maxPoints.append(steps.begin());
+    it = min+1;
+
+    point  = it;
+    while (it != steps.end() and point != steps.end())
+    {
+        min = it+1;
+        point++;
+        QVector<stepVibro>::Iterator save = it;
+        while (point != steps.end() and  point->m_time < save->m_time + windows)
         {
-            countPoint--;
-        } else
+            if (point->m_verticalPressure_kPa < min->m_verticalPressure_kPa)
+            {
+                min = point;
+            }
+            point++;
+        }
+        qDebug() << "it ->"<< it->m_time << "\tpoint ->" << point->m_time << "\tmin ->"<<min->m_time<< "\tnextValue ->"<< save->m_time + windows <<"\n" ;
+        if (it->m_time == 1.73015)
         {
-            return false;
+            qDebug() <<"here";
+        }
+        if (min == it+1)
+        {
+            while (it->m_time < save->m_time + windows / 4)
+            {
+                if (it == steps.end())
+                    break;
+                it++;
+            }
+        }
+        else
+        {
+            min->isDown = true;
+            minPoints.append(min);
+            min->numberTact = countCicle;
+            countCicle++;
+            while (it != steps.end() and it->m_time < save->m_time + windows)
+            {
+                if (it == steps.end())
+                    break;
+                it++;
+            }
         }
     }
 
-    steps[index].isDown = true;
-    return true;
+
+
+    it = max+1;
+    point  = it;
+    while (it != steps.end() and point != steps.end())
+    {
+        max = it+1;
+        point++;
+        QVector<stepVibro>::Iterator save = it;
+        while (point != steps.end() && point->m_time < save->m_time + windows)
+        {
+            if (point->m_verticalPressure_kPa > max->m_verticalPressure_kPa)
+            {
+                max = point;
+            }
+            point++;
+        }
+
+        if (max == it+1)
+        {
+            while (it->m_time < save->m_time + windows / 4)
+            {
+                if (it == steps.end())
+                    break;
+                it++;
+            }
+        }
+        else
+        {
+            max->isUp = true;
+            maxPoints.append(max);
+            while (it->m_time < save->m_time + windows)
+            {
+                if (it == steps.end())
+                    break;
+                it++;
+            }
+        }
+    }
+
+
+    maxPoints.removeLast();
+    minPoints.removeLast();
+
+    setNumberPoints();
+    return;
 }
-
-
-

@@ -1,7 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "calcamplitud.h"
+#include "correctinput.h"
 
-#include <QStringList>
 
 void setAmplitudeStress(QDoubleSpinBox* box);
 void setAmplitudeDeform(QDoubleSpinBox* box);
@@ -12,47 +13,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     setFixedSize(800,600);
-    date = new vibroData(ui->height->value(),ui->diametrs->value());
-
-    // ui->frequency->setSuffix(" Гц.");
-    // ui->frequency->setValue(0.5);
-    // ui->frequency->setRange(0.01,10);
-    // ui->frequency->setSingleStep(0.05);
-    // ui->typeAmplitude->addItem("По контролю напряжения");
-    // ui->typeAmplitude->addItem("По контролю деформации");
-    // ui->typeAmplitude->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    // // setAmplitudeStress(ui->amplitude);
-    // connect(ui->typeAmplitude,QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::ChangeAmplutude);
-
 }
 
-void MainWindow::ChangeAmplutude(int index)
-{
-    if (index == 0 )
-    {
-        // setAmplitudeStress(ui->amplitude);
-    }
-    else if (index == 1)
-    {
-        // setAmplitudeDeform(ui->amplitude);
-    }
-}
-
-void setAmplitudeStress(QDoubleSpinBox* box)
-{
-    box->setRange(0,100);
-    box->setSuffix(" Н");
-    box->setValue(10);
-    box->setSingleStep(5);
-}
-
-void setAmplitudeDeform(QDoubleSpinBox* box)
-{
-    box->setRange(0,0.5);
-    box->setSuffix(" %, ε");
-    box->setValue(0.001);
-    box->setSingleStep(0.005);
-}
 MainWindow::~MainWindow()
 {
     delete ui;
@@ -60,19 +22,24 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_calculateVibro_clicked()
 {
+    data = new vibroData(ui->height->value(),ui->diametrs->value());
+    data->ampl = ui->ampl->value();
+    data->frequency = ui->frquency->value();
+
     bool hat = true;
     bool u0read = true;
     double u0;
     QString str;
     QStringList list;
     QString filePath = QFileDialog::getOpenFileName();
+
     if (!filePath.isEmpty())
     {
         QFile file(filePath);
         if(file.open(QIODevice::ReadOnly | QIODevice::Text))
         {
             QTextStream stream(&file);
-            int count = 0;
+            //int count = 0;
             while (!stream.atEnd())
             {
                 str = stream.readLine();
@@ -85,8 +52,7 @@ void MainWindow::on_calculateVibro_clicked()
                         u0read = false;
                         u0 = list[6].toDouble();
                     }
-                    date->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
-
+                    data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
                 }
                 else
                 {
@@ -96,14 +62,86 @@ void MainWindow::on_calculateVibro_clicked()
             qDebug() << Q_FUNC_INFO;
         }
     }
-    date->normalizeData();
-    report.reportToFileExcel(date);
-    qDebug() << 1;
+
+    correctInput * cor = new correctInput(nullptr, data);
+    if (cor->exec() == QDialog::Accepted)
+    {
+        if (ui->checkBox->isChecked())
+            data->normalizeData();
+
+        report.reportToFileExcelVibrocell(data);
+        qDebug() << 1;
+        delete(data);
+    }
+    else
+    {
+        QMessageBox::critical(nullptr,"Ошибка", "Надо было нажимать ОК для дальнейшей обработки");
+    }
 }
 
 void MainWindow::on_action_triggered()
 {
     calcAmplitud * w = new calcAmplitud();
-    w->show();
+    w->exec();
+}
+
+
+void MainWindow::on_calculateVibro_2_clicked()
+{
+    data = new vibroData(ui->height->value(),ui->diametrs->value());
+    data->ampl = ui->ampl->value();
+    data->frequency = ui->frquency->value();
+
+    bool hat = true;
+    bool u0read = true;
+    double u0;
+    QString str;
+    QStringList list;
+    QString filePath = QFileDialog::getOpenFileName();
+
+    if (!filePath.isEmpty())
+    {
+        QFile file(filePath);
+        if(file.open(QIODevice::ReadOnly | QIODevice::Text))
+        {
+            QTextStream stream(&file);
+            //int count = 0;
+            while (!stream.atEnd())
+            {
+                str = stream.readLine();
+                str = str.replace(',','.');
+                list = str.split('\t');
+                if (!hat)
+                {
+                    if (u0read)
+                    {
+                        u0read = false;
+                        u0 = list[6].toDouble();
+                    }
+                    data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
+                }
+                else
+                {
+                    hat = false;
+                }
+            }
+            qDebug() << Q_FUNC_INFO;
+        }
+    }
+
+    correctInput * cor = new correctInput(nullptr, data);
+    if (cor->exec() == QDialog::Accepted)
+    {
+        if (ui->checkBox->isChecked())
+            data->normalizeData();
+
+        report.reportToFileExcelSeismic(data);
+        qDebug() << 1;
+        delete(data);
+    }
+    else
+    {
+        QMessageBox::critical(nullptr,"Ошибка", "Надо было нажимать ОК для дальнейшей обработки");
+    }
 }
 

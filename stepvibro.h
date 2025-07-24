@@ -1,5 +1,7 @@
 #ifndef STEPVIBRO_H
 #define STEPVIBRO_H
+#include <QDebug>
+
 
 class stepVibro
 {
@@ -25,9 +27,11 @@ public:
     double PPR;
     double epsilon_;
     double m_h0;
+    double m_d0;
 
-    bool isUp;
-    bool isDown;
+    bool isUp = false;
+    bool isDown = false ;
+    int numberTact = -1;
 
     void calc();
 
@@ -38,7 +42,7 @@ public:
               double porePressure_KPA,double porePressureAux_kPA,
               double verticalDeform_mm, double m_shearDeform_mm,
               double cellVolume_mm3, double poreVolume_mm3,
-              int mode, double u0, double h0);
+              int mode, double u0, double h0, double d0);
     ~stepVibro()
     {
         // qDebug() << "Destruction stepVibro";

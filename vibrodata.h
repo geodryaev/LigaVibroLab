@@ -13,27 +13,27 @@ private:
 
     QVector<stepVibro> processedStepsUP;
     QVector<stepVibro> processedStepsDown;
-
     QVector<double> buffer;
 
-    double frequency;
+
     double maxPressure = 0;
-    double height;
-    double diametrs;
+               // Это значение с которого мы начинаем динамику (мин в юриной программе)
     const double delta = 0.001; // Разрешение погрешности при удалении подстройки (УСЛОВИЕ КОГДА ПОДСТРОЙКА СРАБОТАЛА)
 
-
-    void cropAdjustment();
-    bool cheackPointMax(int index, int countPoint);
-    bool cheackpointMin(int index, int countPoint);
-
-    /*
-     * Создание истины ??
-     */
+    void setNumberPoints ();
 
 public:
-
     QVector<stepVibro> steps;
+    QVector<QVector<stepVibro>::Iterator> minPoints;
+    QVector<QVector<stepVibro>::Iterator> maxPoints;
+
+    double frequency;
+    double height;
+    double diametrs;
+    double minForce;
+    double ampl;
+
+
     vibroData(double height, double diametrs);
     ~vibroData(){
             // qDebug() << "Destruction vibroData";
