@@ -19,6 +19,7 @@
 #include <qwt/qwt_plot.h>
 #include <qwt/qwt_plot_curve.h>
 #include <qwt/qwt_plot_grid.h>
+#include <qwt/qwt_symbol.h>
 #include <cmath>
 
 #include "vibrodata.h"
@@ -34,6 +35,7 @@ private:
     int height;
 
     QImage insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData);
+    QImage insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData, int *a, int *b);
     int getY(int y);
 };
 

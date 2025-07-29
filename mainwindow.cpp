@@ -20,18 +20,18 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+//Вибропалзучесть
 void MainWindow::on_calculateVibro_clicked()
 {
-    data = new vibroData(ui->height->value(),ui->diametrs->value());
-    data->ampl = ui->ampl->value();
-    data->frequency = ui->frquency->value();
-
     bool hat = true;
     bool u0read = true;
     double u0;
     QString str;
     QStringList list;
-    QString filePath = QFileDialog::getOpenFileName();
+    QString filePath = QFileDialog::getOpenFileName(this, "Выберите CSV файл","","CSV файлы (*.csv)");
+
+    data = new vibroData(ui->height->value(),ui->diametrs->value(), ui->minAmpl->value(),ui->maxAmpl->value());
+    data->frequency = ui->frquency->value();
 
     if (!filePath.isEmpty())
     {
@@ -39,11 +39,9 @@ void MainWindow::on_calculateVibro_clicked()
         if(file.open(QIODevice::ReadOnly | QIODevice::Text))
         {
             QTextStream stream(&file);
-            //int count = 0;
             while (!stream.atEnd())
             {
-                str = stream.readLine();
-                str = str.replace(',','.');
+                str = stream.readLine().replace(',','.');
                 list = str.split('\t');
                 if (!hat)
                 {
@@ -64,6 +62,7 @@ void MainWindow::on_calculateVibro_clicked()
     }
 
     correctInput * cor = new correctInput(nullptr, data);
+    cor->setWindowState(Qt::WindowMaximized);
     if (cor->exec() == QDialog::Accepted)
     {
         if (ui->checkBox->isChecked())
@@ -79,25 +78,18 @@ void MainWindow::on_calculateVibro_clicked()
     }
 }
 
-void MainWindow::on_action_triggered()
-{
-    calcAmplitud * w = new calcAmplitud();
-    w->exec();
-}
-
-
+//Cейсмо
 void MainWindow::on_calculateVibro_2_clicked()
 {
-    data = new vibroData(ui->height->value(),ui->diametrs->value());
-    data->ampl = ui->ampl->value();
-    data->frequency = ui->frquency->value();
-
     bool hat = true;
     bool u0read = true;
     double u0;
     QString str;
     QStringList list;
-    QString filePath = QFileDialog::getOpenFileName();
+    QString filePath = QFileDialog::getOpenFileName(this, "Выберите CSV файл","","CSV файлы (*.csv)");
+
+    data = new vibroData(ui->height_2->value(),ui->diametrs_2->value(), ui->minAmpl_2->value(), ui->maxAmpl_2->value());
+    data->frequency = ui->frquency_2->value();
 
     if (!filePath.isEmpty())
     {
@@ -105,11 +97,9 @@ void MainWindow::on_calculateVibro_2_clicked()
         if(file.open(QIODevice::ReadOnly | QIODevice::Text))
         {
             QTextStream stream(&file);
-            //int count = 0;
             while (!stream.atEnd())
             {
-                str = stream.readLine();
-                str = str.replace(',','.');
+                str = stream.readLine().replace(',','.');
                 list = str.split('\t');
                 if (!hat)
                 {
@@ -130,6 +120,7 @@ void MainWindow::on_calculateVibro_2_clicked()
     }
 
     correctInput * cor = new correctInput(nullptr, data);
+    cor->setWindowState(Qt::WindowMaximized);
     if (cor->exec() == QDialog::Accepted)
     {
         if (ui->checkBox->isChecked())
@@ -145,3 +136,8 @@ void MainWindow::on_calculateVibro_2_clicked()
     }
 }
 
+void MainWindow::on_action_triggered()
+{
+    calcAmplitud * w = new calcAmplitud();
+    w->exec();
+}

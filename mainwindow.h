@@ -31,7 +31,6 @@ private:
     Report report;
     double diametrs;
     double height;
-
 private slots:
     void on_calculateVibro_clicked();
 

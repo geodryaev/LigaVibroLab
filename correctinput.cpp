@@ -50,6 +50,7 @@ correctInput::correctInput(QWidget *parent, vibroData * data)
 
         picker = new QwtPlotPicker(plot->canvas());
         picker->setStateMachine(new QwtPickerClickPointMachine()); // режим: одиночные клики
+        picker->setMousePattern(QwtEventPattern::MouseSelect1, Qt::RightButton);
         picker->setTrackerMode(QwtPicker::AlwaysOn);               // показывать координаты
         picker->setRubberBand(QwtPicker::CrossRubberBand);            // не рисуем прямоугольник
         picker->setEnabled(true);

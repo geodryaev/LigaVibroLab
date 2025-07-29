@@ -16,11 +16,13 @@ void vibroData::setNumberPoints()
     }
 }
 
-vibroData::vibroData(double height, double diametrs)
+vibroData::vibroData(double height, double diametrs, double minF, double maxF)
 {
     this->height = height;
     this->diametrs = diametrs;
-
+    minForce = minF;
+    maxForce = maxF;
+    ampl = (maxF - minF) / 2;
 }
 
 void vibroData::push(double time, double verticalPressure_KPA,
@@ -36,107 +38,50 @@ void vibroData::push(double time, double verticalPressure_KPA,
 
 void vibroData::normalizeData()
 {
-    double windows = 1 / frequency / 60 *1.05;
-    int countCicle = 1;
-    QVector<stepVibro>::Iterator it = steps.begin();
-    QVector<stepVibro>::Iterator min = steps.begin();
-    QVector<stepVibro>::Iterator max = steps.begin();
-    QVector<stepVibro>::Iterator point;
+    double commonLine = (maxForce - minForce) / 2;
+    bool down = true;
+    QVector<stepVibro>::Iterator currentPoint = steps.begin();
+    QVector<stepVibro>::Iterator currentMin = steps.begin();
+    QVector<stepVibro>::Iterator currentMax = steps.begin();
 
-    steps.begin()->isDown = true;
-    steps.begin()->isUp = true;
-    steps.begin()->numberTact = 0;
-    minPoints.append(steps.begin());
-    maxPoints.append(steps.begin());
-    it = min+1;
-
-    point  = it;
-    while (it != steps.end() and point != steps.end())
+    if(currentPoint->m_verticalPressure_kPa < commonLine)
     {
-        min = it+1;
-        point++;
-        QVector<stepVibro>::Iterator save = it;
-        while (point != steps.end() and  point->m_time < save->m_time + windows)
+        down = true;
+    }
+    else
+    {
+
+        down = false;
+    }
+
+    while(currentPoint != steps.end())
+    {
+        if (down)
         {
-            if (point->m_verticalPressure_kPa < min->m_verticalPressure_kPa)
+            currentMin = currentPoint;
+            while (currentPoint != steps.end() && currentPoint->m_verticalPressure_kPa < commonLine)
             {
-                min = point;
+                if (currentMin->m_verticalPressure_kPa >  currentPoint->m_verticalPressure_kPa)
+                    currentMin = currentPoint;
+                qDebug() << currentPoint++->m_time;
             }
-            point++;
-        }
-        qDebug() << "it ->"<< it->m_time << "\tpoint ->" << point->m_time << "\tmin ->"<<min->m_time<< "\tnextValue ->"<< save->m_time + windows <<"\n" ;
-        if (it->m_time == 1.73015)
-        {
-            qDebug() <<"here";
-        }
-        if (min == it+1)
-        {
-            while (it->m_time < save->m_time + windows / 4)
-            {
-                if (it == steps.end())
-                    break;
-                it++;
-            }
+            currentMin->isDown = true;
+            minPoints.append(currentMin);
+            // qDebug() << currentPoint++->m_time;
+            down = false;
         }
         else
         {
-            min->isDown = true;
-            minPoints.append(min);
-            min->numberTact = countCicle;
-            countCicle++;
-            while (it != steps.end() and it->m_time < save->m_time + windows)
+            currentMax = currentPoint;
+            while (currentPoint != steps.end() && currentPoint->m_verticalPressure_kPa > commonLine)
             {
-                if (it == steps.end())
-                    break;
-                it++;
+                if (currentMax->m_verticalPressure_kPa <  currentPoint->m_verticalPressure_kPa)
+                    currentMax = currentPoint;
+                qDebug() << currentPoint++->m_time;
             }
+            currentMax->isUp = true;
+            maxPoints.append(currentMax);
+            down = true;
         }
     }
-
-
-
-    it = max+1;
-    point  = it;
-    while (it != steps.end() and point != steps.end())
-    {
-        max = it+1;
-        point++;
-        QVector<stepVibro>::Iterator save = it;
-        while (point != steps.end() && point->m_time < save->m_time + windows)
-        {
-            if (point->m_verticalPressure_kPa > max->m_verticalPressure_kPa)
-            {
-                max = point;
-            }
-            point++;
-        }
-
-        if (max == it+1)
-        {
-            while (it->m_time < save->m_time + windows / 4)
-            {
-                if (it == steps.end())
-                    break;
-                it++;
-            }
-        }
-        else
-        {
-            max->isUp = true;
-            maxPoints.append(max);
-            while (it->m_time < save->m_time + windows)
-            {
-                if (it == steps.end())
-                    break;
-                it++;
-            }
-        }
-    }
-
-
-    maxPoints.removeLast();
-    minPoints.removeLast();
-
-    setNumberPoints();
-    return;
 }

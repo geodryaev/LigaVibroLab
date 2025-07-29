@@ -16,8 +16,9 @@ private:
     QVector<double> buffer;
 
 
-    double maxPressure = 0;
-               // Это значение с которого мы начинаем динамику (мин в юриной программе)
+    double maxPressure = 0; // Это значение с которого мы начинаем динамику (мин в юриной программе)
+    double minForce = 0;
+    double maxForce = 0;
     const double delta = 0.001; // Разрешение погрешности при удалении подстройки (УСЛОВИЕ КОГДА ПОДСТРОЙКА СРАБОТАЛА)
 
     void setNumberPoints ();
@@ -30,11 +31,9 @@ public:
     double frequency;
     double height;
     double diametrs;
-    double minForce;
     double ampl;
 
-
-    vibroData(double height, double diametrs);
+    vibroData(double height, double diametrs, double minF, double maxF);
     ~vibroData(){
             // qDebug() << "Destruction vibroData";
     }

@@ -28,7 +28,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="vibrocreep">
        <attribute name="title">
@@ -57,8 +57,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>387</width>
-          <height>214</height>
+          <width>340</width>
+          <height>264</height>
          </rect>
         </property>
         <layout class="QFormLayout" name="formLayout">
@@ -166,25 +166,12 @@
             </font>
            </property>
            <property name="text">
-            <string>Амплитуда</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <widget class="QCheckBox" name="checkBox">
-           <property name="text">
-            <string>Включить автоматическую обрезку</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-           <property name="tristate">
-            <bool>false</bool>
+            <string>Максимум</string>
            </property>
           </widget>
          </item>
          <item row="2" column="1">
-          <widget class="QDoubleSpinBox" name="ampl">
+          <widget class="QDoubleSpinBox" name="maxAmpl">
            <property name="font">
             <font>
              <pointsize>16</pointsize>
@@ -202,7 +189,7 @@
           </widget>
          </item>
          <item row="3" column="0">
-          <widget class="QLabel" name="label_8">
+          <widget class="QLabel" name="label_14">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -215,11 +202,29 @@
             </font>
            </property>
            <property name="text">
-            <string>Частота</string>
+            <string>Минимум</string>
            </property>
           </widget>
          </item>
          <item row="3" column="1">
+          <widget class="QDoubleSpinBox" name="minAmpl">
+           <property name="font">
+            <font>
+             <pointsize>16</pointsize>
+            </font>
+           </property>
+           <property name="suffix">
+            <string> кПа.</string>
+           </property>
+           <property name="maximum">
+            <double>1000.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>10.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
           <widget class="QDoubleSpinBox" name="frquency">
            <property name="font">
             <font>
@@ -240,6 +245,37 @@
            </property>
           </widget>
          </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_8">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>16</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Частота</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QCheckBox" name="checkBox">
+           <property name="text">
+            <string>Включить автоматическую обрезку</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <property name="tristate">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </widget>
@@ -252,8 +288,8 @@
          <rect>
           <x>10</x>
           <y>40</y>
-          <width>387</width>
-          <height>214</height>
+          <width>340</width>
+          <height>276</height>
          </rect>
         </property>
         <layout class="QFormLayout" name="formLayout_2">
@@ -361,25 +397,12 @@
             </font>
            </property>
            <property name="text">
-            <string>Амплитуда</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <widget class="QCheckBox" name="checkBox_2">
-           <property name="text">
-            <string>Включить автоматическую обрезку</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-           <property name="tristate">
-            <bool>false</bool>
+            <string>Максимум</string>
            </property>
           </widget>
          </item>
          <item row="2" column="1">
-          <widget class="QDoubleSpinBox" name="ampl_2">
+          <widget class="QDoubleSpinBox" name="maxAmpl_2">
            <property name="font">
             <font>
              <pointsize>16</pointsize>
@@ -397,7 +420,7 @@
           </widget>
          </item>
          <item row="3" column="0">
-          <widget class="QLabel" name="label_12">
+          <widget class="QLabel" name="label_13">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -410,11 +433,29 @@
             </font>
            </property>
            <property name="text">
-            <string>Частота</string>
+            <string>Минимум</string>
            </property>
           </widget>
          </item>
          <item row="3" column="1">
+          <widget class="QDoubleSpinBox" name="minAmpl_2">
+           <property name="font">
+            <font>
+             <pointsize>16</pointsize>
+            </font>
+           </property>
+           <property name="suffix">
+            <string> кПа.</string>
+           </property>
+           <property name="maximum">
+            <double>1000.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>10.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
           <widget class="QDoubleSpinBox" name="frquency_2">
            <property name="font">
             <font>
@@ -432,6 +473,37 @@
            </property>
            <property name="value">
             <double>0.500000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_12">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>16</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Частота</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QCheckBox" name="checkBox_2">
+           <property name="text">
+            <string>Включить автоматическую обрезку</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <property name="tristate">
+            <bool>false</bool>
            </property>
           </widget>
          </item>

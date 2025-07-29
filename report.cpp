@@ -1,34 +1,8 @@
 #include "report.h"
+#include "qwt/qwt_symbol.h"
 #include <QDesktopServices>
 #include <QUrl>
 Report::Report() {}
-
-
-void getXYData (QVector<double> *XData, QVector<double> *YData, const vibroData * data)
-{
-    XData->clear();
-    YData->clear();
-    int count = 0;
-    for (const stepVibro &el : data->steps)
-    {
-        if (el.isUp )
-        {
-            if (count == 9)
-            {
-                XData->append(log((el.m_time + 0.1f)*60));
-                YData->append(el.epsilon_*100);
-                count = 0;
-            }
-            else
-            {
-                count++;
-            }
-            // XData->append(el.m_time);
-            // YData->append(el.m_cellPressure_kPa);
-        }
-
-    }
-}
 
 
 QVector<double> convertToN(const vibroData * data)
@@ -64,6 +38,47 @@ QVector<double> convertToN(const vibroData * data)
 
     return result;
 }
+
+double getW (QVector<double> *XData, QVector<double> *YData, const vibroData * data)
+{
+    XData->clear();
+    YData->clear();
+    double w = 0;
+
+    for (QVector<stepVibro>::ConstIterator it = data->steps.begin(); it < data->steps.end()-1; it++)
+    {
+        w+= 0.5f * ( (it+1)->m_verticalPressure_kPa + it->m_verticalPressure_kPa) * ((it+1)->epsilon_ - it->epsilon_);
+        XData->append(it->epsilon_);
+        YData->append(it->m_verticalPressure_kPa);
+    }
+
+    return w;
+}
+
+void getXYDataEpsD (QVector<double> *XData, QVector<double> *YData, const vibroData * data)
+{
+    XData->clear();
+    YData->clear();
+    int count = 0;
+    for (const stepVibro &el : data->steps)
+    {
+        if (el.isUp )
+        {
+            if (count == 9)
+            {
+                XData->append(log((el.m_time + 0.1f)*60));
+                YData->append(el.epsilon_*100);
+                count = 0;
+            }
+            else
+            {
+                count++;
+            }
+        }
+
+    }
+}
+
 
 QImage Report::insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData)
 {
@@ -104,11 +119,58 @@ QImage Report::insertGraph(QString title, QString strX, QString strY, QVector<do
     return img;
 }
 
+QImage Report::insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData, int *a, int *b)
+{
+    QwtPlot plot;
+    double minValX = *std::min_element(xData.begin(), xData.end());
+    double maxValX = *std::max_element(xData.begin(), xData.end());
+
+    double minValY = *std::min_element(yData.begin(), yData.end());
+    double maxValY = *std::max_element(yData.begin(), yData.end());
+    plot.setTitle(title);
+    plot.setCanvasBackground(Qt::white);
+    plot.setAxisTitle(QwtPlot::xBottom, strX);
+    plot.setAxisTitle(QwtPlot::yLeft, strY);
+    plot.setAxisScale(QwtPlot::xBottom, minValX, maxValX);
+    plot.setAxisScale(QwtPlot::yLeft, minValY, maxValY);
+
+    QwtPlotCurve *curv = new QwtPlotCurve();
+    curv->setSamples(xData, yData);
+    curv->setStyle(QwtPlotCurve::NoCurve);
+    curv->setSymbol(new QwtSymbol(
+        QwtSymbol::Ellipse,
+        QBrush(Qt::black),
+        QPen(Qt::black),
+        QSize(8, 2)
+        ));
+
+    curv->attach(&plot);
+
+    QwtPlotGrid *grid = new QwtPlotGrid();
+    grid->setMajorPen(QPen(Qt::lightGray, 1, Qt::DashLine));
+    grid->setMinorPen(QPen(Qt::gray, 0.5, Qt::DotLine));
+    grid->attach(&plot);
+
+
+    int width = fmax(600, xData.size() / 100);
+    int height = fmax(400, yData.size() / 100);
+    plot.resize(width, height);
+
+    plot.replot();
+    QImage img(plot.size(),QImage::Format_ARGB32);
+    img.fill(Qt::white);
+    QPainter paint(&img);
+    plot.render(&paint);
+    paint.end();
+    return img;
+}
+
 void Report::reportToFileExcelVibrocell(const vibroData* data)
 {
     QString pathToFile = QFileDialog::getSaveFileName(NULL, QObject::tr("Сохранить Excel файл"),QString(), QObject::tr("Excel Files (*.xlsx);;All Files (*)"));
     QXlsx::Document doc;
     QXlsx::Format left;
+    int a = 0,b = 0;
     left.setHorizontalAlignment(QXlsx::Format::AlignLeft);
     doc.write("A1","Test");
     qDebug() << "QApplication instance pointer:" << QCoreApplication::instance();
@@ -124,7 +186,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     doc.write(4,1,"Частота");
     doc.write(4,2, QString::number(data->frequency) + " Гц");
     doc.write(5,1,"Количество циклов");
-    doc.write(5,2, data->minPoints.size()-1,left );
+    doc.write(5,2, data->minPoints.size(),left );
 
     for(const stepVibro &el:data->steps)
     {
@@ -186,11 +248,17 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     XData.clear();
     YData.clear();
 
-    getXYData(&XData,&YData,data);
+    double w = getW(&XData,&YData,data);
+    doc.write(9,1,"ΔW");
+    doc.write(9,2,QString::number(w,'f',6) + " кПа.");
+    doc.insertImage(43,5, insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
 
-    doc.insertImage(43,5,insertGraph("ε = f(lnt)","Время, ln(мин.)","Осевая деформация ε, %",XData, YData));
+    getXYDataEpsD(&XData,&YData,data);
+    doc.insertImage(43,16,insertGraph("ε = f(lnt)","Время, ln(мин.)","Осевая деформация ε, %",XData, YData,&a,&b));
     XData.clear();
     YData.clear();
+
+
 
     doc.saveAs(pathToFile);
     QDesktopServices::openUrl(QUrl::fromLocalFile(pathToFile));
@@ -215,7 +283,7 @@ void Report::reportToFileExcelSeismic(const vibroData *data){
     doc.write(4,1,"Частота");
     doc.write(4,2, QString::number(data->frequency) + " Гц");
     doc.write(5,1,"Количество циклов");
-    doc.write(5,2, data->minPoints.size()-1,left );
+    doc.write(5,2, data->minPoints.size(),left );
 
     for(const stepVibro &el:data->steps)
     {
@@ -276,6 +344,11 @@ void Report::reportToFileExcelSeismic(const vibroData *data){
     doc.insertImage(22,16,insertGraph("График услия","Время, мин.","Усилие, кПа.",XData, YData));
     XData.clear();
     YData.clear();
+
+    double w = getW(&XData,&YData,data);
+    doc.write(9,1,"ΔW");
+    doc.write(9,2,QString::number(w,'f',6) + " кПа.");
+    doc.insertImage(43,5, insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
 
     doc.saveAs(pathToFile);
     QDesktopServices::openUrl(QUrl::fromLocalFile(pathToFile));

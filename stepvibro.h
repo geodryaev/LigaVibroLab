@@ -22,6 +22,8 @@ public:
 
     double sigma1_;
     double sigma3_;
+    double sigma1;
+    double sigma3;
     double q;
     double p_;
     double PPR;
@@ -36,7 +38,7 @@ public:
     void calc();
 
 
-    stepVibro();
+    stepVibro(){}
     stepVibro(double time, double verticalPressure_KPA,
               double shearPressure_KPA, double cellPressure_KPA,
               double porePressure_KPA,double porePressureAux_kPA,

@@ -1,11 +1,5 @@
 #include "stepvibro.h"
 
-
-
-stepVibro::stepVibro()
-{
-
-}
 void stepVibro::calc()
 {
     if (m_cellPressure_kPa != 0.0f)
@@ -18,6 +12,8 @@ void stepVibro::calc()
     }
     sigma1_ = m_cellPressure_kPa + m_verticalPressure_kPa - m_porePressure_KPA;
     sigma3_ = m_cellPressure_kPa - m_porePressure_KPA;
+    sigma1_ = m_cellPressure_kPa + m_verticalPressure_kPa ;
+    sigma3_ = m_cellPressure_kPa ;
     p_ = (sigma1_ + 2 * sigma3_)/3;
     q = (sigma1_ - sigma3_)/2;
     epsilon_ = m_verticalDeform_mm / m_h0;
