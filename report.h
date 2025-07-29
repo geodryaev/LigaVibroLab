@@ -20,6 +20,7 @@
 #include <qwt/qwt_plot_curve.h>
 #include <qwt/qwt_plot_grid.h>
 #include <qwt/qwt_symbol.h>
+#include <QMessageBox>
 #include <cmath>
 
 #include "vibrodata.h"

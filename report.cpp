@@ -165,8 +165,16 @@ QImage Report::insertGraph(QString title, QString strX, QString strY, QVector<do
     return img;
 }
 
+
+//Вибропазлучесть
 void Report::reportToFileExcelVibrocell(const vibroData* data)
 {
+    if (data->minPoints.size() < 499)
+    {
+        QMessageBox::critical(nullptr, "Неверные данные","В вашей выгрузки колчиество циклов составляет " + QString::number(data->minPoints.size()) + ", у вас должно быть минимум 500 циклов в соотвествии с ГОСТ Р 56353-2022 п. 6.4.3.4");
+        return;
+    }
+
     QString pathToFile = QFileDialog::getSaveFileName(NULL, QObject::tr("Сохранить Excel файл"),QString(), QObject::tr("Excel Files (*.xlsx);;All Files (*)"));
     QXlsx::Document doc;
     QXlsx::Format left;
