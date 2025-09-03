@@ -1,71 +1,57 @@
-cmake_minimum_required(VERSION 3.5)
-project(VibroProcessing LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.21)
+project(VibroProcessing VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
-#set(CMAKE_BUILD_TYPE Debug)
-#set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
-set(QWT_INCLUDE_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/include")
-set(QWT_LIBRARY_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/lib")
-set(QWT_LIBRARY_DIR_D "${VCPKG_INSTALLED_DIR}/x64-windows/debug/lib")
-set(QWT_LIB_DEBUG "${QWT_LIBRARY_DIR_D}/qwtd.lib")
-set(QWT_LIB_RELEASE "${QWT_LIBRARY_DIR}/qwt.lib")
+if(MSVC)
+  cmake_policy(SET CMP0091 NEW)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
 
-# Убедись, что путь к Qt 6 правильно указан через CMAKE_PREFIX_PATH при вызове cmake
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
 
 add_subdirectory(QXlsx)
 
-
+# РУЧНЫЕ ПУТИ (оставь только если не можешь использовать find_package)
+set(QWT_INCLUDE_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/include")
+set(QWT_LIBRARY_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/lib")
+set(QWT_LIBRARY_DIR_D "${VCPKG_INSTALLED_DIR}/x64-windows/debug/lib")
+# Удобнее генераторные выражения вместо debug/optimized:
+set(QWT_LIB $<$<CONFIG:Debug>:${QWT_LIBRARY_DIR_D}/qwtd.lib>$<$<CONFIG:Release>:${QWT_LIBRARY_DIR}/qwt.lib>)
 
 add_executable(VibroProcessing
-    main.cpp
-    mainwindow.cpp
-    vibrodata.cpp
-
-    mainwindow.h
-    vibrodata.h
-
-    mainwindow.ui
-    report.h
-    report.cpp
-    stepvibro.h stepvibro.cpp
-
-    calcamplitud.h
-    calcamplitud.cpp
-    calcamplitud.ui
-    correctinput.h correctinput.cpp correctinput.ui
+  main.cpp
+  mainwindow.cpp
+  vibrodata.cpp
+  mainwindow.h
+  vibrodata.h
+  mainwindow.ui
+  report.h
+  report.cpp
+  stepvibro.h stepvibro.cpp
+  calcamplitud.h
+  calcamplitud.cpp
+  calcamplitud.ui
+  correctinput.h correctinput.cpp correctinput.ui
+  supportmodul.h supportmodul.cpp supportmodul.ui
 )
 
-target_compile_definitions(VibroProcessing PRIVATE
-    QT_DEPRECATED_WARNINGS
-)
-
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug)
-endif()
-
-target_include_directories(VibroProcessing PRIVATE QXlsx)
 target_include_directories(VibroProcessing PRIVATE ${QWT_INCLUDE_DIR})
 
-target_link_directories(VibroProcessing PRIVATE ${QWT_LIBRARY_DIR})
-
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /DEBUG")
-#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi /Od")
+if(MSVC)
+  target_compile_options(VibroProcessing PRIVATE $<$<CONFIG:Debug>:/Zi>)
+  target_link_options(VibroProcessing PRIVATE $<$<CONFIG:Debug>:/DEBUG>)
+endif()
 
 target_link_libraries(VibroProcessing PRIVATE
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-    debug ${QWT_LIB_DEBUG}
-    optimized ${QWT_LIB_RELEASE}
-    QXlsx
+  Qt6::Core
+  Qt6::Gui
+  Qt6::Widgets
+  Qt6::Network
+  ${QWT_LIB}
+  QXlsx
 )
-
-

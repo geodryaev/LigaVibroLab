@@ -49,26 +49,22 @@ correctInput::correctInput(QWidget *parent, vibroData * data)
         zoom->setMousePattern(QwtEventPattern::MouseSelect2, Qt::RightButton, Qt::ControlModifier);
 
         picker = new QwtPlotPicker(plot->canvas());
-        picker->setStateMachine(new QwtPickerClickPointMachine()); // режим: одиночные клики
+        picker->setStateMachine(new QwtPickerClickPointMachine());
         picker->setMousePattern(QwtEventPattern::MouseSelect1, Qt::RightButton);
-        picker->setTrackerMode(QwtPicker::AlwaysOn);               // показывать координаты
-        picker->setRubberBand(QwtPicker::CrossRubberBand);            // не рисуем прямоугольник
+        picker->setTrackerMode(QwtPicker::AlwaysOn);
+        picker->setRubberBand(QwtPicker::CrossRubberBand);
         picker->setEnabled(true);
 
-        // Цвет "подсказки" координат:
         picker->setTrackerPen(QPen(Qt::black));
 
-        // Подключаем сигнал
         connect(picker, SIGNAL(selected(QPointF)), this, SLOT(onPointClick(QPointF)));
 
         plot->resize(800,600);
         plot->replot();
         if (!ui->widget->layout()) {
-            // Если layout нет — создаём вертикальный
             QVBoxLayout *layout = new QVBoxLayout(ui->widget);
             layout->addWidget(plot);
         } else {
-            // Если layout уже есть — просто добавляем в него график
             ui->widget->layout()->addWidget(plot);
         }
 
@@ -154,8 +150,6 @@ void correctInput::on_pushButton_clicked()
         data->steps.erase(data->steps.begin(), data->steps.begin() + startIndex);
         data->steps.erase(data->steps.begin() + (endIndex - startIndex + 1), data->steps.end());
     }
-
-
     accept();
 }
 

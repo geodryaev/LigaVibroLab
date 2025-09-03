@@ -38,7 +38,7 @@ void vibroData::push(double time, double verticalPressure_KPA,
 
 void vibroData::normalizeData()
 {
-    double commonLine = (maxForce - minForce) / 2;
+    double commonLine = (maxForce + minForce) / 2;
     bool down = true;
     QVector<stepVibro>::Iterator currentPoint = steps.begin();
     QVector<stepVibro>::Iterator currentMin = steps.begin();

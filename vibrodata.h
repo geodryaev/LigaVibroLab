@@ -34,8 +34,9 @@ public:
     double ampl;
 
     vibroData(double height, double diametrs, double minF, double maxF);
-    ~vibroData(){
-            // qDebug() << "Destruction vibroData";
+    ~vibroData()
+    {
+            qDebug() << "Destruction vibroData";
     }
     void push (double time, double verticalPressure_KPA,
               double shearPressure_KPA, double cellPressure_KPA,
@@ -45,7 +46,6 @@ public:
               int mode, double u0);
 
     void normalizeData();
-
 };
 
 

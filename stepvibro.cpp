@@ -4,7 +4,7 @@ void stepVibro::calc()
 {
     if (m_cellPressure_kPa != 0.0f)
     {
-        PPR = (m_porePressure_KPA - m_u0)/ (m_cellPressure_kPa -m_u0);
+        PPR = m_porePressure_KPA / ((m_verticalPressure_kPa+m_cellPressure_kPa+m_cellPressure_kPa+m_cellPressure_kPa)/3);
     }
     else
     {
