@@ -3,7 +3,8 @@
 #include <QPointer>
 #include <qpushbutton.h>
 #include "ui_supportmodul.h"
-#include "qwt/qwt_plot_grid.h"
+#include "qwt/qwt_text.h"
+
 #include <QPen>
 
 supportmodul::supportmodul(bool def, int countCicle, const vibroData* data, QWidget *parent)
@@ -42,8 +43,8 @@ supportmodul::supportmodul(bool def, int countCicle, const vibroData* data, QWid
     // d_plot->setAxisScale(QwtPlot::yLeft, *std::min_element(vY.begin(),vY.end())*(1-(1-scalePadding)),*std::max_element(vY.begin(),vY.end())*scalePadding);
     // d_plot->setAxisScale(QwtPlot::xBottom, -1,*std::max_element(vX.begin(),vX.end())*scalePadding);
     // d_plot->setAxisScale(QwtPlot::yLeft, -1,*std::max_element(vY.begin(),vY.end())*scalePadding);
-
-    QwtPlotGrid grid;
+    downDistance = *std::min_element(vY.begin(),vY.end()) - ((*std::max_element(vY.begin(),vY.end()) - *std::min_element(vY.begin(),vY.end())) * 0.1);
+    upDistance = *std::max_element(vX.begin(),vX.end()) - *std::min_element(vX.begin(), vX.end());
     grid.setMajorPen(QPen(Qt::gray,1,Qt::DashLine));
     grid.setMinorPen(QPen(Qt::gray,1,Qt::DashLine));
     grid.attach(d_plot);
@@ -107,18 +108,90 @@ void supportmodul::processingModileDeform(bool checked)
     xs << point1.first << point2.first;
     ys << point1.second << point2.second;
 
-    if (last)
-    {
-        last->detach();
-        delete (last);
-        last = nullptr;
-    }
+    clear();
 
-    last = new QwtPlotCurve (QwtPlotCurve("y = kb+b"));
-    last->setSamples(xs,ys);
-    last->setPen(Qt::red,2);
-    last->attach(d_plot);
+    supCurv.append(new QwtPlotCurve ("y = kx + b"));
+    supCurv[supCurv.size()-1]->setSamples(xs,ys);
+    supCurv[supCurv.size()-1]->setPen(Qt::red,2);
+    supCurv[supCurv.size()-1]->attach(d_plot);
+
+    xs.clear();
+    ys.clear();
+
+    //нижняя прямая
+
+    double lenY = (*std::max_element(vY.begin(),vY.end()) - *std::min_element(vY.begin(),vY.end()))*0.01;
+    vector(point1.first,downDistance,point2.first,downDistance);
+    vector(point2.first,point2.second + lenY*0.05, point2.first, point1.first);
+
+
+
     d_plot->replot();
+
 }
 
+void supportmodul::setLine(double x1, double y1, double x2, double y2)
+{
+    QVector<double> xs;
+    QVector<double> ys;
+
+    supCurv.append(new QwtPlotCurve());
+
+    xs << x1 << x2;
+    ys <<y1 << y2 ;
+    supCurv[supCurv.size()-1]->setSamples(xs,ys);
+    supCurv[supCurv.size()-1]->setPen(Qt::red,2);
+    supCurv[supCurv.size()-1]->attach(d_plot);
+}
+
+
+
+void supportmodul::clear()
+{
+
+    for(auto el : supCurv)
+    {
+        el->detach();
+        delete(el);
+    }
+
+    supCurv.clear();
+}
+
+void supportmodul::vector(double x1, double y1, double x2, double y2)
+{
+    QVector<double> xs;
+    QVector<double> ys;
+
+    xs << x1 << x2;
+    ys << y1 << y2;
+
+    if (y1 == y2)
+    {
+        double lenX = abs(x2-x1) * 0.05;
+        double lenY = (*std::max_element(vY.begin(),vY.end()) - *std::min_element(vY.begin(),vY.end()))*0.01;
+        setLine(x1,y1,x1+lenX,y1+lenY);
+        setLine(x1,y1,x1+lenX,y1-lenY);
+        setLine(x2,y2,x2-lenX,y2-lenY);
+        setLine(x2,y2,x2-lenX,y2+lenY);
+    }
+
+    if (x1 == x2)
+    {
+        double lenX = abs(y2-x1) * 0.05;
+
+        setLine(x1,y1,x1+downDistance*0.1,y1+lenX * 0.01);
+        setLine(x1,y1,x1+lenX,y1-lenX);
+        setLine(x2,y2,x2-lenX,y2-lenX);
+        setLine(x2,y2,x2-lenX,y2+lenX);
+    }
+
+
+    supCurv.append(new QwtPlotCurve ("sigma"));
+    supCurv[supCurv.size()-1]->setSamples(xs,ys);
+    supCurv[supCurv.size()-1]->setPen(Qt::red,2);
+    supCurv[supCurv.size()-1]->attach(d_plot);
+
+
+}
 
