@@ -38,7 +38,7 @@ private:
     QImage insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData);
     QImage insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData, double *a, double *b);
     QImage insertGraph(QString title, QString strX, QString strY, QString strY2,QVector<double> xData, QVector<double> yData, QVector<double> yData2);
-    QImage getModulsDeforms(QString title, QString strX, QString strY, const vibroData* data, double *modile, bool choice);
+    QImage getModulsDeforms(const vibroData* data, double *modile, bool choice);
     int getY(int y);
 };
 

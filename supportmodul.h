@@ -19,9 +19,13 @@ class supportmodul : public QDialog
 public:
     explicit supportmodul(bool def, int countCilce,const vibroData* data, QWidget *parent = nullptr);
     ~supportmodul();
+    QImage * getImage();
+    double getModule();
 
 private slots:
     void processingModileDeform(bool checked);
+    void on_buttonBox_accepted();
+
 private:
     Ui::supportmodul *ui;
     QwtPlot *d_plot;
@@ -30,14 +34,22 @@ private:
     QVector<double> vY;
     QVector<QwtPlotCurve*> supCurv;
     QVector<QwtPlotMarker*> supMarker;
+    QImage *img = nullptr;
+
+    //choice == true -> динамический модуль упрогости
+    //choice == false -> динамический модуль дуформации
+
     const vibroData *data;
+    bool choice;
     double downDistance = 0;
     double upDistance = 0;
-
+    double dinamicModElastic = 0; //модуль упругсоти
+    double dinamicModDifform = 0; //модуль дифформации
 
     void setLine(double x1, double y1, double x2, double y2);
     void clear();
     void vector(double x1, double y1, double x2, double y2);
+    void setText(int maskPosition, QString text, double x1, double y1, double x2, double y2);
 };
 
 #endif // SUPPORTMODUL_H

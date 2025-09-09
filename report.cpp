@@ -129,7 +129,7 @@ void getXYDataEpsD (QVector<double> *XData, QVector<double> *YData, const vibroD
     }
 }
 
-QImage Report::getModulsDeforms(QString title, QString strX, QString strY, const vibroData* data, double *modile, bool choice)
+QImage Report::getModulsDeforms(const vibroData* data, double *module, bool choice)
 {
 
     //choice == true -> динамический модуль упрогости
@@ -151,8 +151,11 @@ QImage Report::getModulsDeforms(QString title, QString strX, QString strY, const
     supportmodul *sup = new supportmodul(choice, countCicle, data);
     sup->exec();
 
+    *module = sup->getModule();
 
 
+    if (sup->getImage() != nullptr)
+        return *sup->getImage();
 
     return QImage();
 }
@@ -534,7 +537,9 @@ void Report::reportToFileExcelSeismic(const vibroData *data){
     doc.insertImage(43,5, insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
 
     double moduleDeform;
-    getModulsDeforms("График зависимости напряжения от осевой деформации", "Осевое напряжение, кПа.", "Осевая деформация, e*10-3",data, &moduleDeform, true);
+    doc.insertImage(64,5, getModulsDeforms(data, &moduleDeform, true));
+
+    doc.insertImage(64,16, getModulsDeforms(data, &moduleDeform, false));
 
 
     doc.saveAs(pathToFile);
