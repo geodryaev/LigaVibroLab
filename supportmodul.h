@@ -25,6 +25,7 @@ public:
 private slots:
     void processingModileDeform(bool checked);
     void on_buttonBox_accepted();
+    void changeRange(int index);
 
 private:
     Ui::supportmodul *ui;
@@ -35,7 +36,7 @@ private:
     QVector<QwtPlotCurve*> supCurv;
     QVector<QwtPlotMarker*> supMarker;
     QImage *img = nullptr;
-
+    QVector<QPointer<QPushButton>> vecButton;
     //choice == true -> динамический модуль упрогости
     //choice == false -> динамический модуль дуформации
 
@@ -45,6 +46,7 @@ private:
     double upDistance = 0;
     double dinamicModElastic = 0; //модуль упругсоти
     double dinamicModDifform = 0; //модуль дифформации
+    int countPoints = 0;
 
     void setLine(double x1, double y1, double x2, double y2);
     void clear();

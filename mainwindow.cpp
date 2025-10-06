@@ -91,6 +91,7 @@ void MainWindow::on_calculateVibro_2_clicked()
     data = new vibroData(ui->height_2->value(),ui->diametrs_2->value(), ui->minAmpl_2->value(), ui->maxAmpl_2->value());
     data->frequency = ui->frquency_2->value();
 
+
     if (!filePath.isEmpty())
     {
         QFile file(filePath);

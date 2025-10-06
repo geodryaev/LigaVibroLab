@@ -88,7 +88,6 @@ void correctInput::onPointClick(const QPointF &point)
             double x2 = selectPoint[1].x();
             qDebug() << "Выделенный интервал X: от" << x1 << "до" << x2;
 
-            // Здесь можешь сделать, что хочешь: обрезать график, выделить цветом и т.д.
         }
     }
     else

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(VibroProcessing VERSION 0.1 LANGUAGES CXX)
+project(LigaVibroLab VERSION 0.5 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,7 +23,7 @@ set(QWT_LIBRARY_DIR_D "${VCPKG_INSTALLED_DIR}/x64-windows/debug/lib")
 # Удобнее генераторные выражения вместо debug/optimized:
 set(QWT_LIB $<$<CONFIG:Debug>:${QWT_LIBRARY_DIR_D}/qwtd.lib>$<$<CONFIG:Release>:${QWT_LIBRARY_DIR}/qwt.lib>)
 
-add_executable(VibroProcessing
+add_executable(VibroProcessing WIN32
   main.cpp
   mainwindow.cpp
   vibrodata.cpp
@@ -38,6 +38,7 @@ add_executable(VibroProcessing
   calcamplitud.ui
   correctinput.h correctinput.cpp correctinput.ui
   supportmodul.h supportmodul.cpp supportmodul.ui
+  resources.qrc
 )
 
 target_include_directories(VibroProcessing PRIVATE ${QWT_INCLUDE_DIR})

@@ -12,35 +12,81 @@ supportmodul::supportmodul(bool def, int countCicle, const vibroData* data_, QWi
     : QDialog(parent),
     ui(new Ui::supportmodul),
     data(data_),
-    choice(def)
+    choice(def), //true -> вычисляем упругость
+    countPoints (countCicle)
 {
     ui->setupUi(this);
+    ui->selectCicle->setMaximum(data->minPoints.size());
+    ui->selectCicle->setMinimum(2);
 
     d_plot = new QwtPlot (nullptr);
     QVBoxLayout *layout = new QVBoxLayout (ui->graph);
     layout->addWidget(d_plot);
     int count = 0;
-    bool start = false;
 
-    d_plot->setTitle("Определение динамического модуля упругости");
-    d_plot->setAxisTitle(QwtAxis::YLeft, QwtText("Осевое напряжение Δσ′<sub>1</sub>, кПа."));
-    d_plot->setAxisTitle(QwtAxis::XBottom, QwtText("Осевое напряжение Δe*10<sup>-3</sup>, кПа."));
+        bool start = true;
 
-    for (int i = 0; i < data->steps.size() && count < countCicle+1; i++)
+    if(choice)
     {
-        if (data_->steps[i].isDown)
-            count++;
-        if (start)
+        ui->label->setText("Вычисление динамического модуля упругости");
+        ui->value->setText("E<sup>y</sup><sub>d</sub> = 0 МПа.");
+        setWindowTitle("Вычисление динамического модуля упругости");
+        ui->selectCicle->setValue(6);
+        if (data->minPoints.size() > 10)
         {
-            vX.push_back(data_->steps[i].epsilon_);
-            vY.push_back(data_->steps[i].m_verticalPressure_kPa);
+            ui->selectCicle->setMaximum(10);
         }
         else
         {
-            if (count > 2)
-                start = true;
+            ui->selectCicle->setMaximum(data->minPoints.size());
+        }
+
+        d_plot->setTitle("Определение динамического модуля упругости");
+        for (int i = 0; i < data->steps.size() && count < countCicle+1; i++)
+        {
+            if (data_->steps[i].isDown)
+                count++;
+            if (start)
+            {
+                vX.push_back(data_->steps[i].epsilon_ * 1000);
+                vY.push_back(data_->steps[i].sigma1_);
+            }
+            else
+            {
+                if (count > 2)
+                    start = true;
+            }
         }
     }
+    else
+    {
+        d_plot->setTitle("Определение динамического модуля деформации");
+        ui->label->setText("Вычисление динамического модуля деформации");
+        setWindowTitle("Вычисление динамического модуля деформации");
+        ui->selectCicle->setMinimum(0);
+        ui->selectCicle->setValue(0);
+        for (int i = 0; i < data->steps.size(); i++)
+        {
+            if (data_->steps[i].isDown)
+                count++;
+            if (start)
+            {
+                vX.push_back(data_->steps[i].epsilon_ * 1000);
+                vY.push_back(data_->steps[i].sigma1_);
+            }
+            else
+            {
+                if (count > 2)
+                    start = true;
+            }
+        }
+    }
+
+    d_plot->setAxisTitle(QwtAxis::YLeft, QwtText("Осевое напряжение Δσ′<sub>1</sub>, кПа."));
+    d_plot->setAxisTitle(QwtAxis::XBottom, QwtText("Осевая деформация Δe*10<sup>-3</sup>, д.е."));
+
+    connect(ui->selectCicle,&QSpinBox::valueChanged,this,&supportmodul::changeRange);
+
 
     QwtPlotCurve *curv = new QwtPlotCurve (QwtPlotCurve("e(t)"));
     curv->setSamples(vX,vY);
@@ -53,15 +99,21 @@ supportmodul::supportmodul(bool def, int countCicle, const vibroData* data_, QWi
     grid.setMinorPen(QPen(Qt::gray,1,Qt::DashLine));
     grid.attach(d_plot);
 
-    QVector<QPointer<QPushButton>> vecButton;
-    for (int i  = 0 ; i < countCicle; i++)
+    if (choice)
     {
-        auto btn = new QPushButton();
-        vecButton.append(btn);
-        btn->setMinimumSize(25,25);
-        btn->setText(QString::number(i+1));
-        ui->dinamicPanel->addWidget(btn);
-        connect(btn,&QPushButton::clicked,this,&supportmodul::processingModileDeform);
+        for (int i  = 0 ; i < ui->selectCicle->value(); i++)
+        {
+            auto btn = new QPushButton();
+            vecButton.append(btn);
+            btn->setMinimumSize(25,25);
+            btn->setText(QString::number(i+1));
+            ui->dinamicPanel->addWidget(btn);
+            connect(btn,&QPushButton::clicked,this,&supportmodul::processingModileDeform);
+        }
+    }
+    else
+    {
+        changeRange(0);
     }
 
     d_plot->replot();
@@ -100,62 +152,62 @@ void supportmodul::processingModileDeform(bool checked)
     int numberCicle = btn->text().toInt()-1;
     int count = 0;
 
-    for (int i = 0; i < data->steps.size() && count < numberCicle + 3; i++)
+    if (choice)
     {
-        if (data->steps[i].isDown)
+        for (int i = 0; i < data->steps.size() && count < numberCicle + 3; i++)
         {
-            if (count == numberCicle + 1)
+            if (data->steps[i].isDown)
             {
-                point1.setX( data->steps[i].epsilon_);
-                point1.setY( data->steps[i].m_verticalPressure_kPa);
-                down = true;
+                if (count == numberCicle + 1)
+                {
+                    point1.setX( data->steps[i].epsilon_ * 1000);
+                    point1.setY( data->steps[i].sigma1_);
+                    down = true;
+                }
+                if (count == numberCicle + 2)
+                {
+                    point3.setX( data->steps[i].epsilon_ * 1000);
+                    point3.setY(data->steps[i].sigma1_);
+                }
+                count++;
             }
-            if (count == numberCicle + 2)
+            if ( down && data->steps[i].isUp)
             {
-                point3.setX( data->steps[i].epsilon_);
-                point3.setY(data->steps[i].m_verticalPressure_kPa);
+                point2.setX(data->steps[i].epsilon_ * 1000);
+                point2.setY(data->steps[i].sigma1_);
+                down = false;
             }
-            count++;
         }
-        if ( down && data->steps[i].isUp)
-        {
-            point2.setX(data->steps[i].epsilon_);
-            point2.setY(data->steps[i].m_verticalPressure_kPa);
-            down = false;
-        }
+
+        QVector<double> xs;
+        QVector<double> ys;
+
+        xs << point1.x()<< point2.x();
+        ys << point1.y()<< point2.y();
+
+        clear();
+
+        supCurv.append(new QwtPlotCurve ("y = kx + b"));
+        supCurv[supCurv.size()-1]->setSamples(xs,ys);
+        supCurv[supCurv.size()-1]->setPen(Qt::red,2);
+        supCurv[supCurv.size()-1]->attach(d_plot);
+
+        xs.clear();
+        ys.clear();
+
+
+        vector(point1.x(),downDistance,point2.x(),downDistance);
+        setText(1,"Δε<sub>c</sub>",point1.x(),downDistance,point2.x(),downDistance);
+
+        vector(point2.x(),point2.y(), point2.x(), point1.y());
+        setText(3,"Δσ′",point2.x(),point2.y(), point2.x(), point1.x());
+
+        vector(point3.x(),point3.y(),point2.x(),point3.y());
+        setText(1,"Δε<sub>y</sub>",point3.x(),point3.y(),point2.x(),point3.y());
+
+        dinamicModElastic = (point2.y()-point1.y()) /(point2.x()-point3.x());
+        ui->value->setText("E<sup>y</sup><sub>d</sub> = " + QString::number(dinamicModElastic) + " МПа.");
     }
-
-    double k = (point2.y()- point1.y())/(point2.x() - point1.x());
-    double b = point1.y()- k * point1.x();
-    QVector<double> xs;
-    QVector<double> ys;
-
-    xs << point1.x()<< point2.x();
-    ys << point1.y() << point2.y();
-
-    clear();
-
-    supCurv.append(new QwtPlotCurve ("y = kx + b"));
-    supCurv[supCurv.size()-1]->setSamples(xs,ys);
-    supCurv[supCurv.size()-1]->setPen(Qt::red,2);
-    supCurv[supCurv.size()-1]->attach(d_plot);
-
-    xs.clear();
-    ys.clear();
-
-
-    vector(point1.x(),downDistance,point2.x(),downDistance);
-    setText(1,"Δε<sub>c</sub>",point1.x(),downDistance,point2.x(),downDistance);
-
-    vector(point2.x(),point2.y(), point2.x(), point1.x());
-    setText(3,"Δσ′",point2.x(),point2.y(), point2.x(), point1.x());
-
-    vector(point3.x(),point3.y(),point2.x(),point3.y());
-    setText(1,"Δε<sub>y</sub>",point3.x(),point3.y(),point2.x(),point3.y());
-
-    dinamicModElastic = (point2.y()-point1.y())/(point2.x()-point3.x());
-
-
 
     d_plot->replot();
 }
@@ -283,4 +335,118 @@ void supportmodul::on_buttonBox_accepted()
     d_plot->render(&paint);
     paint.end();
     accepted();
+}
+
+void supportmodul::changeRange(int index)
+{
+    clear();
+    qDeleteAll(vecButton);
+    d_plot->detachItems(QwtPlotItem::Rtti_PlotCurve, true);
+    d_plot->replot();
+    int count = 0;
+    bool start = true;
+
+    vX.clear();
+    vY.clear();
+    if (index == 0 && !choice)
+    {
+        index = data->steps.size();
+    }
+    if (index > 0 && index < 3)
+    {
+        index = 3;
+    }
+    for (int i = 0; i < data->steps.size() && count < index+1; i++)
+    {
+        if (data->steps[i].isDown)
+            count++;
+        if (start)
+        {
+            vX.push_back(data->steps[i].epsilon_ * 1000);
+            vY.push_back(data->steps[i].sigma1_);
+        }
+        else
+        {
+            if (count > 2)
+                start = true;
+        }
+    }
+    QwtPlotCurve *curv = new QwtPlotCurve (QwtPlotCurve("e(t)"));
+    curv->setSamples(vX,vY);
+    curv->attach(d_plot);
+    if (choice)
+    {
+        for (int i  = 0 ; i < ui->selectCicle->value(); i++)
+        {
+            auto btn = new QPushButton();
+            vecButton.append(btn);
+            btn->setMinimumSize(25,25);
+            btn->setText(QString::number(i+1));
+            ui->dinamicPanel->addWidget(btn);
+            connect(btn,&QPushButton::clicked,this,&supportmodul::processingModileDeform);
+        }
+    }
+    else
+    {
+        QPointF point1;
+        QPointF point2;
+
+        bool down = true;
+        bool first = true;
+        int count = 0;
+        double avarageDown = 0;
+
+        if (index == 0)
+        {
+            countPoints = data->minPoints.size();
+        }
+        else
+        {
+            countPoints = index;
+        }
+        point1.setX(vX[0]);
+
+        for (int i = 0; i < data->steps.size() && count < countPoints; i++)
+        {
+
+            if (data->steps[i].isDown)
+            {
+                avarageDown += data->steps[i].sigma1_;
+                count++;
+            }
+            if (data->steps[i].isUp && point2.x() < data->steps[i].epsilon_ * 1000)
+            {
+                point2.setX(data->steps[i].epsilon_ * 1000);
+                point2.setY(data->steps[i].sigma1_);
+                qDebug() << i << '\n';
+            }
+        }
+        avarageDown/=count;
+        point1.setY(avarageDown);
+
+        QVector<double> xs;
+        QVector<double> ys;
+
+        xs << point1.x()<< point2.x();
+        ys << point1.y() << point2.y();
+
+        clear();
+
+        supCurv.append(new QwtPlotCurve ("y = kx + b"));
+        supCurv[supCurv.size()-1]->setSamples(xs,ys);
+        supCurv[supCurv.size()-1]->setPen(Qt::red,2);
+        supCurv[supCurv.size()-1]->attach(d_plot);
+
+        xs.clear();
+        ys.clear();
+
+        vector(point1.x(),point1.y(), point2.x(),point1.y());
+        setText(1,"Δε<sub>max</sub>",point1.x(),point1.y(), point2.x(),point1.y());
+        vector(point2.x(),point2.y(),point2.x(),point1.y());
+        setText(3,"Δσ′",point2.x(),point1.y(),point2.x(),point2.y());
+
+        dinamicModDifform = std::abs(point2.y() - point1.y()) / std::abs(point2.x() - point1.x()) ;
+        ui->value->setText("E<sub>d</sub> = " + QString::number(dinamicModDifform) + " МПа.");
+    }
+    d_plot->replot();
 }

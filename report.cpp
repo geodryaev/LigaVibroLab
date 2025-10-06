@@ -1,7 +1,8 @@
 #include "report.h"
 #include "qwt/qwt_symbol.h"
 #include "supportmodul.h"
-
+#include "xlsxrichstring.h"
+#include "QFont"
 #include <QDesktopServices>
 #include <QUrl>
 Report::Report() {}
@@ -149,9 +150,11 @@ QImage Report::getModulsDeforms(const vibroData* data, double *module, bool choi
 
     qDebug() << countCicle << '\n';
     supportmodul *sup = new supportmodul(choice, countCicle, data);
+    sup->setWindowState(Qt::WindowMaximized);
     sup->exec();
 
     *module = sup->getModule();
+
 
 
     if (sup->getImage() != nullptr)
@@ -421,7 +424,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
         YData.append(el.m_verticalPressure_kPa);
     }
     XData = convertToN(data);
-    doc.insertImage(22,16,insertGraph("График зависимости напряжения от вермени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
+    doc.insertImage(22,16,insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
     XData.clear();
     YData.clear();
 
@@ -443,7 +446,28 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     XData.clear();
     YData.clear();
 
+    QXlsx::RichString r;
+    QXlsx::Format normal;
+    QXlsx::Format sub;
+    QXlsx::Format sup;
+    sup.setFontScript(QXlsx::Format::FontScriptSuper);
+    sub.setFontScript(QXlsx::Format::FontScriptSub);
 
+
+    double moduleDeform;
+    doc.insertImage(64,5, getModulsDeforms(data, &moduleDeform, true));
+    r.addFragment("E", normal);
+    r.addFragment("y",sup);
+    r.addFragment("d",sub);
+    doc.write(7,1,r);
+    doc.write(7,2,QString::number(moduleDeform) + " МПа.");
+
+    doc.insertImage(64,16, getModulsDeforms(data, &moduleDeform, false));
+    r = QXlsx::RichString();
+    r.addFragment("E", normal);
+    r.addFragment("d",sub);
+    doc.write(8,1,r);
+    doc.write(8,2,QString::number(moduleDeform) + " МПа.");
 
     doc.saveAs(pathToFile);
     QDesktopServices::openUrl(QUrl::fromLocalFile(pathToFile));
@@ -527,7 +551,7 @@ void Report::reportToFileExcelSeismic(const vibroData *data){
         YData.append(el.m_verticalPressure_kPa);
     }
     XData = convertToN(data);
-    doc.insertImage(22,16,insertGraph("График зависимости напряжения от вермени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
+    doc.insertImage(22,16,insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
     XData.clear();
     YData.clear();
 
@@ -536,10 +560,29 @@ void Report::reportToFileExcelSeismic(const vibroData *data){
     doc.write(9,2,QString::number(w,'f',6) + " кПа.");
     doc.insertImage(43,5, insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
 
+
+    QXlsx::RichString r;
+    QXlsx::Format normal;
+    QXlsx::Format sub;
+    QXlsx::Format sup;
+    sup.setFontScript(QXlsx::Format::FontScriptSuper);
+    sub.setFontScript(QXlsx::Format::FontScriptSub);
+
+
     double moduleDeform;
     doc.insertImage(64,5, getModulsDeforms(data, &moduleDeform, true));
+    r.addFragment("E", normal);
+    r.addFragment("y",sup);
+    r.addFragment("d",sub);
+    doc.write(7,1,r);
+    doc.write(7,2,QString::number(moduleDeform) + " МПа.");
 
     doc.insertImage(64,16, getModulsDeforms(data, &moduleDeform, false));
+    r = QXlsx::RichString();
+    r.addFragment("E", normal);
+    r.addFragment("d",sub);
+    doc.write(8,1,r);
+    doc.write(8,2,QString::number(moduleDeform) + " МПа.");
 
 
     doc.saveAs(pathToFile);
