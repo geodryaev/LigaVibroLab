@@ -80,7 +80,7 @@
                <string/>
               </property>
               <property name="minimum">
-               <number>50</number>
+               <number>20</number>
               </property>
               <property name="maximum">
                <number>500</number>
@@ -122,7 +122,7 @@
                <string/>
               </property>
               <property name="minimum">
-               <number>100</number>
+               <number>10</number>
               </property>
               <property name="maximum">
                <number>500</number>
@@ -402,12 +402,15 @@
                <string/>
               </property>
               <property name="minimum">
-               <number>50</number>
+               <number>20</number>
               </property>
               <property name="maximum">
                <number>500</number>
               </property>
               <property name="singleStep">
+               <number>10</number>
+              </property>
+              <property name="displayIntegerBase">
                <number>10</number>
               </property>
              </widget>
@@ -444,12 +447,18 @@
                <string/>
               </property>
               <property name="minimum">
-               <number>100</number>
+               <number>10</number>
               </property>
               <property name="maximum">
                <number>500</number>
               </property>
               <property name="singleStep">
+               <number>10</number>
+              </property>
+              <property name="value">
+               <number>100</number>
+              </property>
+              <property name="displayIntegerBase">
                <number>10</number>
               </property>
              </widget>
@@ -693,12 +702,24 @@
     </property>
     <addaction name="action"/>
    </widget>
+   <widget class="QMenu" name="menu_2">
+    <property name="title">
+     <string>Настройка</string>
+    </property>
+    <addaction name="action_2"/>
+   </widget>
    <addaction name="menu"/>
+   <addaction name="menu_2"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="action">
    <property name="text">
     <string>Амплитуда</string>
+   </property>
+  </action>
+  <action name="action_2">
+   <property name="text">
+    <string>Цвет графиков</string>
    </property>
   </action>
  </widget>

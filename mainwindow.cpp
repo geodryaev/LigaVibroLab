@@ -2,7 +2,8 @@
 #include "ui_mainwindow.h"
 #include "calcamplitud.h"
 #include "correctinput.h"
-
+#include <QSettings>
+#include <QColorDialog>
 
 void setAmplitudeStress(QDoubleSpinBox* box);
 void setAmplitudeDeform(QDoubleSpinBox* box);
@@ -13,6 +14,10 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     setFixedSize(800,600);
+    ui->height->setValue(100);
+    ui->height_2->setValue(100);
+    ui->diametrs->setValue(50);
+    ui->diametrs_2->setValue(50);
 }
 
 MainWindow::~MainWindow()
@@ -30,11 +35,13 @@ void MainWindow::on_calculateVibro_clicked()
     QStringList list;
     QString filePath = QFileDialog::getOpenFileName(this, "Выберите CSV файл","","CSV файлы (*.csv)");
 
-    data = new vibroData(ui->height->value(),ui->diametrs->value(), ui->minAmpl->value(),ui->maxAmpl->value());
-    data->frequency = ui->frquency->value();
+
 
     if (!filePath.isEmpty())
     {
+        data = new vibroData(ui->height->value(),ui->diametrs->value(), ui->minAmpl->value(),ui->maxAmpl->value());
+        data->frequency = ui->frquency->value();
+
         QFile file(filePath);
         if(file.open(QIODevice::ReadOnly | QIODevice::Text))
         {
@@ -65,9 +72,7 @@ void MainWindow::on_calculateVibro_clicked()
     cor->setWindowState(Qt::WindowMaximized);
     if (cor->exec() == QDialog::Accepted)
     {
-        if (ui->checkBox->isChecked())
-            data->normalizeData();
-
+        data->normalizeData();
         report.reportToFileExcelVibrocell(data);
         qDebug() << 1;
         delete(data);
@@ -87,54 +92,55 @@ void MainWindow::on_calculateVibro_2_clicked()
     QString str;
     QStringList list;
     QString filePath = QFileDialog::getOpenFileName(this, "Выберите CSV файл","","CSV файлы (*.csv)");
-
-    data = new vibroData(ui->height_2->value(),ui->diametrs_2->value(), ui->minAmpl_2->value(), ui->maxAmpl_2->value());
-    data->frequency = ui->frquency_2->value();
-
-
     if (!filePath.isEmpty())
     {
-        QFile file(filePath);
-        if(file.open(QIODevice::ReadOnly | QIODevice::Text))
+
+        data = new vibroData(ui->height_2->value(),ui->diametrs_2->value(), ui->minAmpl_2->value(), ui->maxAmpl_2->value());
+        data->frequency = ui->frquency_2->value();
+
+
+        if (!filePath.isEmpty())
         {
-            QTextStream stream(&file);
-            while (!stream.atEnd())
+            QFile file(filePath);
+            if(file.open(QIODevice::ReadOnly | QIODevice::Text))
             {
-                str = stream.readLine().replace(',','.');
-                list = str.split('\t');
-                if (!hat)
+                QTextStream stream(&file);
+                while (!stream.atEnd())
                 {
-                    if (u0read)
+                    str = stream.readLine().replace(',','.');
+                    list = str.split('\t');
+                    if (!hat)
                     {
-                        u0read = false;
-                        u0 = list[6].toDouble();
+                        if (u0read)
+                        {
+                            u0read = false;
+                            u0 = list[6].toDouble();
+                        }
+                        data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
                     }
-                    data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
+                    else
+                    {
+                        hat = false;
+                    }
                 }
-                else
-                {
-                    hat = false;
-                }
+                qDebug() << Q_FUNC_INFO;
             }
-            qDebug() << Q_FUNC_INFO;
+        }
+        correctInput * cor = new correctInput(nullptr, data);
+        cor->setWindowState(Qt::WindowMaximized);
+        if (cor->exec() == QDialog::Accepted)
+        {
+            data->normalizeData();
+            report.reportToFileExcelSeismic(data);
+            qDebug() << 1;
+            delete(data);
+        }
+        else
+        {
+            QMessageBox::critical(nullptr,"Ошибка", "Надо было нажимать ОК для дальнейшей обработки");
         }
     }
 
-    correctInput * cor = new correctInput(nullptr, data);
-    cor->setWindowState(Qt::WindowMaximized);
-    if (cor->exec() == QDialog::Accepted)
-    {
-        if (ui->checkBox->isChecked())
-            data->normalizeData();
-
-        report.reportToFileExcelSeismic(data);
-        qDebug() << 1;
-        delete(data);
-    }
-    else
-    {
-        QMessageBox::critical(nullptr,"Ошибка", "Надо было нажимать ОК для дальнейшей обработки");
-    }
 }
 
 void MainWindow::on_action_triggered()
@@ -142,3 +148,39 @@ void MainWindow::on_action_triggered()
     calcAmplitud * w = new calcAmplitud();
     w->exec();
 }
+
+void MainWindow::on_action_2_triggered()
+{
+    if (!QFile::exists("settings.ini"))
+    {
+        QSettings setting("settings.ini",QSettings::IniFormat);
+        setting.setValue("",QColorDialog::getColor(Qt::white,NULL,"Выберите цвет графика"));
+        setting.setValue("color/backround",QColorDialog::getColor(Qt::white,NULL,"Выберите цвет фона"));
+        setting.sync();
+    }
+    else
+    {
+
+        QSettings setting("settings.ini",QSettings::IniFormat);
+        QColor old = QColor(setting.value("color/graph").toString());
+
+        setting.setValue("color/graph",
+                         QColorDialog::getColor(
+                             QColor(setting.value("color/graph").toString()).isValid()
+                                 ? QColor(setting.value("color/graph").toString())
+                                 : Qt::white,
+                             NULL,
+                             "Выберите цвет графика")
+                         );
+        setting.setValue("color/backround",
+                         QColorDialog::getColor(
+                             QColor(setting.value("color/backround").toString()).isValid()
+                                 ? QColor(setting.value("color/backround").toString())
+                                 : Qt::white,
+                             NULL,
+                             "Выберите цвет фона")
+                         );
+        setting.sync();
+    }
+}
+

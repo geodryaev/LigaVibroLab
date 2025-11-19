@@ -19,7 +19,7 @@ class supportmodul : public QDialog
 public:
     explicit supportmodul(bool def, int countCilce,const vibroData* data, QWidget *parent = nullptr);
     ~supportmodul();
-    QImage * getImage();
+    QwtPlot * getImage();
     double getModule();
 
 private slots:
@@ -35,7 +35,7 @@ private:
     QVector<double> vY;
     QVector<QwtPlotCurve*> supCurv;
     QVector<QwtPlotMarker*> supMarker;
-    QImage *img = nullptr;
+    QwtPlot * img = nullptr;
     QVector<QPointer<QPushButton>> vecButton;
     //choice == true -> динамический модуль упрогости
     //choice == false -> динамический модуль дуформации

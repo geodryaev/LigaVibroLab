@@ -124,7 +124,7 @@ supportmodul::~supportmodul()
     qDebug()<< "Я умер";
 }
 
-QImage* supportmodul::getImage()
+QwtPlot* supportmodul::getImage()
 {
     return img;
 }
@@ -329,8 +329,9 @@ void supportmodul::setText(int maskPosition, QString text, double x1, double y1,
 
 void supportmodul::on_buttonBox_accepted()
 {
-    img = new QImage(d_plot->size(),QImage::Format_ARGB32);
-    img->fill(Qt::white);
+    d_plot->setFixedSize(800, 600);
+    d_plot->replot();
+    img = d_plot;
     QPainter paint(img);
     d_plot->render(&paint);
     paint.end();

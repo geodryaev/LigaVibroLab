@@ -34,11 +34,17 @@ public:
 private:
     int width;
     int height;
+    QColor colorGraph1;
+    QColor colorGraph2;
+    QColor colorBackround;
+    QString reportDir;
 
-    QImage insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData);
-    QImage insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData, double *a, double *b);
-    QImage insertGraph(QString title, QString strX, QString strY, QString strY2,QVector<double> xData, QVector<double> yData, QVector<double> yData2);
-    QImage getModulsDeforms(const vibroData* data, double *modile, bool choice);
+    void savePlotAsSvg(QwtPlot * plot, QString fylePath);
+
+    QwtPlot * insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData);
+    QwtPlot * insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData, double *a, double *b);
+    QwtPlot * insertGraph(QString title, QString strX, QString strY, QString strY2,QVector<double> xData, QVector<double> yData, QVector<double> yData2);
+    QwtPlot * getModulsDeforms(const vibroData* data, double *modile, bool choice);
     int getY(int y);
 };
 

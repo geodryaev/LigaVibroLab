@@ -12,7 +12,7 @@ if(MSVC)
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Svg REQUIRED)
 
 add_subdirectory(QXlsx)
 
@@ -53,6 +53,7 @@ target_link_libraries(VibroProcessing PRIVATE
   Qt6::Gui
   Qt6::Widgets
   Qt6::Network
+  Qt6::Svg
   ${QWT_LIB}
   QXlsx
 )

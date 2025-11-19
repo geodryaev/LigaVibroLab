@@ -36,6 +36,7 @@ private slots:
 
     void on_action_triggered();
     void on_calculateVibro_2_clicked();
+    void on_action_2_triggered();
 };
 
 #endif // MAINWINDOW_H
