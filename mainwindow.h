@@ -12,6 +12,7 @@
 
 #include "vibrodata.h"
 #include "report.h"
+#include "chartsettings.h"
 
 namespace Ui {
 class MainWindow;

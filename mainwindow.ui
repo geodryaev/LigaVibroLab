@@ -246,10 +246,13 @@
             <item row="5" column="1">
              <widget class="QCheckBox" name="checkBox_2">
               <property name="text">
-               <string>Включить автоматическую обрезку</string>
+               <string>Обнулить поровое давление</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
               </property>
               <property name="checked">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
               <property name="tristate">
                <bool>false</bool>
@@ -577,10 +580,10 @@
             <item row="5" column="1">
              <widget class="QCheckBox" name="checkBox">
               <property name="text">
-               <string>Включить автоматическую обрезку</string>
+               <string>Обнулить поровое давление</string>
               </property>
               <property name="checked">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
               <property name="tristate">
                <bool>false</bool>
@@ -704,7 +707,7 @@
    </widget>
    <widget class="QMenu" name="menu_2">
     <property name="title">
-     <string>Настройка</string>
+     <string>Настройки</string>
     </property>
     <addaction name="action_2"/>
    </widget>

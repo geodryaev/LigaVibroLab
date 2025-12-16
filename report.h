@@ -34,17 +34,28 @@ public:
 private:
     int width;
     int height;
+    int textSize;
+    int positionImg;
+    int countSheet = 0;
+
+    double lineSize;
+
     QColor colorGraph1;
     QColor colorGraph2;
     QColor colorBackround;
+    QColor colorText;
+
     QString reportDir;
 
-    void savePlotAsSvg(QwtPlot * plot, QString fylePath);
+    QImage *insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData);
+    QImage *insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData, double *a, double *b);
+    QImage *insertGraph(QString title, QString strX, QString strY, QString strY2,QVector<double> xData, QVector<double> yData, QVector<double> yData2);
+    QImage *getModulsDeforms(const vibroData* data, double *modile, bool choice);
 
-    QwtPlot * insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData);
-    QwtPlot * insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData, double *a, double *b);
-    QwtPlot * insertGraph(QString title, QString strX, QString strY, QString strY2,QVector<double> xData, QVector<double> yData, QVector<double> yData2);
-    QwtPlot * getModulsDeforms(const vibroData* data, double *modile, bool choice);
+    void savePlotAsSvg(QwtPlot * plot, QString filePath);
+    void addGraphInDocuments(QXlsx::Document* doc, QString title, QString strX, QString strY, QVector<double> vX, QVector<double> vY);
+    void refresh();
+
     int getY(int y);
 };
 

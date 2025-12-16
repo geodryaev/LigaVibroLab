@@ -7,10 +7,12 @@
 #include "qwt/qwt_plot_curve.h"
 #include "qwt/qwt_plot_grid.h"
 #include "qwt/qwt_plot_marker.h"
-
+#include <qwt/qwt_scale_widget.h>
+#include <qwt/qwt_scale_draw.h>
 namespace Ui {
 class supportmodul;
 }
+
 
 class supportmodul : public QDialog
 {
@@ -19,7 +21,7 @@ class supportmodul : public QDialog
 public:
     explicit supportmodul(bool def, int countCilce,const vibroData* data, QWidget *parent = nullptr);
     ~supportmodul();
-    QwtPlot * getImage();
+    QImage * getImage();
     double getModule();
 
 private slots:
@@ -35,7 +37,7 @@ private:
     QVector<double> vY;
     QVector<QwtPlotCurve*> supCurv;
     QVector<QwtPlotMarker*> supMarker;
-    QwtPlot * img = nullptr;
+    QImage * img = nullptr;
     QVector<QPointer<QPushButton>> vecButton;
     //choice == true -> динамический модуль упрогости
     //choice == false -> динамический модуль дуформации
@@ -52,6 +54,30 @@ private:
     void clear();
     void vector(double x1, double y1, double x2, double y2);
     void setText(int maskPosition, QString text, double x1, double y1, double x2, double y2);
+};
+
+class TickDrawX : public QwtScaleDraw {
+public:
+    TickDrawX(const QFont& f) : font(f) {}
+    QwtText label(double v) const override {
+        QwtText t = QwtScaleDraw::label(v);
+        t.setFont(font);
+        return t;
+    }
+private:
+    QFont font;
+};
+
+class TickDrawY : public QwtScaleDraw {
+public:
+    TickDrawY(const QFont& f) : font(f) {}
+    QwtText label(double v) const override {
+        QwtText t = QwtScaleDraw::label(v);
+        t.setFont(font);
+        return t;
+    }
+private:
+    QFont font;
 };
 
 #endif // SUPPORTMODUL_H

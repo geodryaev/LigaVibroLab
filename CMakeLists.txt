@@ -7,14 +7,13 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-if(MSVC)
-  cmake_policy(SET CMP0091 NEW)
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-endif()
+#if(MSVC)
+#  cmake_policy(SET CMP0091 NEW)
+#  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<#$<CONFIG:Debug>:Debug>DLL")
+#endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Svg REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Svg)
 
-add_subdirectory(QXlsx)
 
 # РУЧНЫЕ ПУТИ (оставь только если не можешь использовать find_package)
 set(QWT_INCLUDE_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/include")
@@ -22,6 +21,9 @@ set(QWT_LIBRARY_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/lib")
 set(QWT_LIBRARY_DIR_D "${VCPKG_INSTALLED_DIR}/x64-windows/debug/lib")
 # Удобнее генераторные выражения вместо debug/optimized:
 set(QWT_LIB $<$<CONFIG:Debug>:${QWT_LIBRARY_DIR_D}/qwtd.lib>$<$<CONFIG:Release>:${QWT_LIBRARY_DIR}/qwt.lib>)
+
+set(QXLSX_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(QXLSX_LIB "${CMAKE_CURRENT_SOURCE_DIR}/libs/QXlsxQt6.lib")
 
 add_executable(VibroProcessing WIN32
   main.cpp
@@ -39,14 +41,18 @@ add_executable(VibroProcessing WIN32
   correctinput.h correctinput.cpp correctinput.ui
   supportmodul.h supportmodul.cpp supportmodul.ui
   resources.qrc
+  chartsettings.h chartsettings.cpp chartsettings.ui
 )
 
 target_include_directories(VibroProcessing PRIVATE ${QWT_INCLUDE_DIR})
+target_compile_definitions(VibroProcessing PRIVATE QWT_DLL)
 
-if(MSVC)
-  target_compile_options(VibroProcessing PRIVATE $<$<CONFIG:Debug>:/Zi>)
-  target_link_options(VibroProcessing PRIVATE $<$<CONFIG:Debug>:/DEBUG>)
-endif()
+target_include_directories(VibroProcessing PRIVATE ${QXLSX_INCLUDE_DIR})
+
+#if(MSVC)
+#  target_compile_options(VibroProcessing PRIVATE $<$<CONFIG:Debug>:/Zi>)
+#  target_link_options(VibroProcessing PRIVATE $<$<CONFIG:Debug>:/DEBUG>)
+#endif()
 
 target_link_libraries(VibroProcessing PRIVATE
   Qt6::Core
@@ -55,5 +61,5 @@ target_link_libraries(VibroProcessing PRIVATE
   Qt6::Network
   Qt6::Svg
   ${QWT_LIB}
-  QXlsx
+  ${QXLSX_LIB}
 )

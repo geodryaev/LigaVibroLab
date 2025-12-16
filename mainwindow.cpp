@@ -57,7 +57,17 @@ void MainWindow::on_calculateVibro_clicked()
                         u0read = false;
                         u0 = list[6].toDouble();
                     }
-                    data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
+
+                    if (ui->checkBox_2->isChecked())
+                    {
+                        data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
+                        qDebug() << list[6].toDouble();
+                    }
+                    else
+                    {
+                        data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble() - u0,list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),0);
+                        qDebug() << list[6].toDouble() - u0;
+                    }
                 }
                 else
                 {
@@ -92,6 +102,8 @@ void MainWindow::on_calculateVibro_2_clicked()
     QString str;
     QStringList list;
     QString filePath = QFileDialog::getOpenFileName(this, "Выберите CSV файл","","CSV файлы (*.csv)");
+
+
     if (!filePath.isEmpty())
     {
 
@@ -116,7 +128,18 @@ void MainWindow::on_calculateVibro_2_clicked()
                             u0read = false;
                             u0 = list[6].toDouble();
                         }
-                        data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
+
+                        if (ui->checkBox_2->isChecked())
+                        {
+                            data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
+                            qDebug() << list[6].toDouble();
+                        }
+                        else
+                        {
+                            data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble() - u0,list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),0);
+                            qDebug() << list[6].toDouble() - u0;
+                        }
+
                     }
                     else
                     {
@@ -151,36 +174,8 @@ void MainWindow::on_action_triggered()
 
 void MainWindow::on_action_2_triggered()
 {
-    if (!QFile::exists("settings.ini"))
-    {
-        QSettings setting("settings.ini",QSettings::IniFormat);
-        setting.setValue("",QColorDialog::getColor(Qt::white,NULL,"Выберите цвет графика"));
-        setting.setValue("color/backround",QColorDialog::getColor(Qt::white,NULL,"Выберите цвет фона"));
-        setting.sync();
-    }
-    else
-    {
 
-        QSettings setting("settings.ini",QSettings::IniFormat);
-        QColor old = QColor(setting.value("color/graph").toString());
-
-        setting.setValue("color/graph",
-                         QColorDialog::getColor(
-                             QColor(setting.value("color/graph").toString()).isValid()
-                                 ? QColor(setting.value("color/graph").toString())
-                                 : Qt::white,
-                             NULL,
-                             "Выберите цвет графика")
-                         );
-        setting.setValue("color/backround",
-                         QColorDialog::getColor(
-                             QColor(setting.value("color/backround").toString()).isValid()
-                                 ? QColor(setting.value("color/backround").toString())
-                                 : Qt::white,
-                             NULL,
-                             "Выберите цвет фона")
-                         );
-        setting.sync();
-    }
+    ChartSettings * dil = new ChartSettings();
+    dil->exec();
 }
 

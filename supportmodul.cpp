@@ -4,9 +4,16 @@
 #include <qpainter.h>
 #include <qpushbutton.h>
 #include "ui_supportmodul.h"
-#include "qwt/qwt_text.h"
 
+#include "QSettings"
 #include <QPen>
+#include "qwt/qwt_plot_canvas.h"
+#include <qwt/qwt_scale_widget.h>
+#include "qwt/qwt_text.h"
+#include "qwt/qwt_plot_curve.h"
+#include <qwt/qwt_plot_canvas.h>
+
+
 
 supportmodul::supportmodul(bool def, int countCicle, const vibroData* data_, QWidget *parent)
     : QDialog(parent),
@@ -124,7 +131,7 @@ supportmodul::~supportmodul()
     qDebug()<< "Я умер";
 }
 
-QwtPlot* supportmodul::getImage()
+QImage * supportmodul::getImage()
 {
     return img;
 }
@@ -329,12 +336,83 @@ void supportmodul::setText(int maskPosition, QString text, double x1, double y1,
 
 void supportmodul::on_buttonBox_accepted()
 {
-    d_plot->setFixedSize(800, 600);
+    QSettings settings("settings.ini", QSettings::IniFormat);
+
+    int width  = settings.value("size/width",400).toInt();
+    int height = settings.value("size/height",600).toInt();
+    int sizeFont = settings.value("size/text",12).toInt();
+    double sizeLine = settings.value("size/chart").toDouble();
+
+    QColor colorGraph1(settings.value("color/graph1").toString());
+    QColor colorGraph2(settings.value("color/graph2").toString());
+    QColor colorFont(settings.value("color/font").toString());
+    QColor colorBackround(settings.value("color/backround").toString());
+    qDebug() << colorGraph1.name() << "\n" << colorGraph2.name() << "\n" <<
+        colorBackround.name() << "\n" << colorFont.name() << "\n" << width << "\n"
+             << height << "\n" << sizeLine<< "\n" << sizeFont << "\n";
+
+    qDebug() <<"";
+
+    d_plot->setStyleSheet(QString("background-color: %1").arg(colorBackround.name()));
+
+    QFont titleFont;
+    titleFont.setPointSize(sizeFont);
+
+    QwtText titleText = d_plot->title();
+    titleText.setFont(titleFont);
+    d_plot->setTitle(titleText);
+
+    QFont axisFont;
+    axisFont.setPointSize(sizeFont);
+
+    QwtText xTitle = d_plot->axisTitle(QwtPlot::xBottom);
+    QwtText yTitle = d_plot->axisTitle(QwtPlot::yLeft);
+    xTitle.setFont(axisFont);
+    yTitle.setFont(axisFont);
+    d_plot->setAxisTitle(QwtPlot::yLeft,yTitle);
+    d_plot->setAxisTitle(QwtPlot::xBottom,xTitle);
+
+    d_plot->setAxisScaleDraw(QwtPlot::xBottom, new TickDrawX(axisFont));
+    d_plot->setAxisScaleDraw(QwtPlot::yLeft,   new TickDrawY(axisFont));
+
+    QwtScaleWidget *swX = d_plot->axisWidget(QwtPlot::xBottom);
+    QwtScaleWidget *swY = d_plot->axisWidget(QwtPlot::yLeft);
+    swX->setFont(axisFont);
+    swY->setFont(axisFont);
+    bool first = 1;
+    for (QwtPlotItem *item : d_plot->itemList())
+    {
+        if (item->rtti() == QwtPlotItem::Rtti_PlotCurve)
+        {
+
+            QwtPlotCurve *curve = static_cast<QwtPlotCurve*>(item);
+
+            QPen p = curve->pen();
+            p.setWidthF(sizeLine);
+            if (first)
+            {
+                p.setColor(colorGraph1);
+                first = 0;
+            }
+            else
+            {
+                p.setColor(colorGraph2);
+            }
+            curve->setPen(p);
+        }
+    }
+
+    d_plot->setFixedSize(width, height);
     d_plot->replot();
-    img = d_plot;
-    QPainter paint(img);
-    d_plot->render(&paint);
-    paint.end();
+
+    QImage *img = new QImage(width, height, QImage::Format_ARGB32);
+    img->fill(colorBackround);
+
+    QPainter painter(img);
+    d_plot->render(&painter);
+    painter.end();
+
+    this->img = img;
     accepted();
 }
 

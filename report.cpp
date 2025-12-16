@@ -9,17 +9,17 @@
 #include <QFont>
 #include <QSettings>
 #include "qwt/qwt_text.h"
+#include "qwt/qwt_plot_layout.h"
+#include "qwt/qwt_plot_canvas.h"
+#include "xlsxchart.h"
+#include "qwt/qwt_scale_draw.h"
+#include <qwt/qwt_scale_widget.h>
+#include <qwt/qwt_plot_marker.h>
 
 
-Report::Report() {
-
-    if (QFile::exists("settings.ini"))
-    {
-        QSettings setting ("settings.ini");
-        colorGraph1 = QColor(setting.value("color/graph1").toString()).isValid() ? QColor(setting.value("color/graph1").toString()) : Qt::white;
-        colorGraph2 = QColor(setting.value("color/graph2").toString()).isValid() ? QColor(setting.value("color/graph2").toString()) : Qt::white;
-        colorBackround= QColor(setting.value("color/backround").toString()).isValid() ? QColor(setting.value("color/backround").toString()) : Qt::black;
-    }
+Report::Report()
+{
+    refresh();
 
 }
 
@@ -146,22 +146,30 @@ void getXYDataEpsD (QVector<double> *XData, QVector<double> *YData, const vibroD
     }
 }
 
-void Report::savePlotAsSvg(QwtPlot * plot, QString fylePath)
+void Report::savePlotAsSvg(QwtPlot * plot, QString filePath)
 {
-    QSvgGenerator generator;
-    generator.setFileName(fylePath);
-    generator.setSize(QSize(800,600));
-    generator.setViewBox(QRect(0,0,800,600));
-    generator.setTitle("График");
-    generator.setDescription("test2");
+    const int W = 1600;
+    const int H = 1200;
 
-    QPainter paint;
-    paint.begin(&generator);
-    plot->render(&paint);
-    paint.end();
+    // Настраиваем размер plot-а
+    plot->setFixedSize(W, H);
+
+    // Запускаем layout
+    plot->replot();
+    plot->updateGeometry();
+    plot->plotLayout()->activate(plot, QRect(0,0,W,H));
+
+    // Теперь корректно генерируем SVG
+    QSvgGenerator gen;
+    gen.setFileName(filePath);
+    gen.setSize(QSize(W, H));
+    gen.setViewBox(QRect(0,0,W,H));
+
+    QPainter p(&gen);
+    plot->render(&p);
 }
 
-QwtPlot * Report::getModulsDeforms(const vibroData* data, double *module, bool choice)
+QImage * Report::getModulsDeforms(const vibroData* data, double *module, bool choice)
 {
 
     //choice == true -> динамический модуль упрогости
@@ -192,30 +200,47 @@ QwtPlot * Report::getModulsDeforms(const vibroData* data, double *module, bool c
     return nullptr;
 }
 
-QwtPlot * Report::insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData)
+QImage * Report::insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData)
 {
     QwtPlot * plot = new QwtPlot();
+    plot->show();
+    plot->setStyleSheet(QString("background-color: %1;").arg(colorBackround.name()));
     double minValX = *std::min_element(xData.begin(), xData.end());
     double maxValX = *std::max_element(xData.begin(), xData.end());
 
     double minValY = *std::min_element(yData.begin(), yData.end());
     double maxValY = *std::max_element(yData.begin(), yData.end());
 
-
     QwtText tTitle (title);
+    QwtText xTitle(strX);
+    QwtText yTitle(strY);
+
     QFont font = tTitle.font();
-    font.setPointSize(26);
+    QFont axisTitleFont;
+
+    axisTitleFont.setPointSize(textSize);
+    font.setPointSize(textSize);
+
+
     tTitle.setFont(font);
+    xTitle.setFont(axisTitleFont);
+    yTitle.setFont(axisTitleFont);
+
     plot->setTitle(tTitle);
+
+
     plot->setCanvasBackground(colorBackround);
-    plot->setAxisTitle(QwtPlot::xBottom, strX);
-    plot->setAxisTitle(QwtPlot::yLeft, strY);
+    plot->setAxisTitle(QwtPlot::xBottom, xTitle);
+    plot->setAxisTitle(QwtPlot::yLeft, yTitle);
     plot->setAxisScale(QwtPlot::xBottom, minValX, maxValX);
     plot->setAxisScale(QwtPlot::yLeft, minValY, maxValY);
+    plot->setAxisScaleDraw(QwtPlot::xBottom, new TickDrawX(font));
+    plot->setAxisScaleDraw(QwtPlot::yLeft,   new TickDrawY(font));
+
 
     QwtPlotCurve *curv = new QwtPlotCurve("");
     curv->setSamples(xData, yData);
-    curv->setPen(QPen(colorGraph1,1.1));
+    curv->setPen(QPen(colorGraph1,lineSize));
     curv->attach(plot);
 
     QwtPlotGrid *grid = new QwtPlotGrid();
@@ -223,35 +248,59 @@ QwtPlot * Report::insertGraph(QString title, QString strX, QString strY, QVector
     grid->setMinorPen(QPen(Qt::gray, 0.5, Qt::DotLine));
     grid->attach(plot);
 
-    int width = fmax(800, xData.size() / 100);
-    int height = fmax(600, yData.size() / 100);
     plot->resize(width, height);
-
     plot->replot();
-    return plot;
+    QImage *img = new QImage(width, height, QImage::Format_ARGB32);
+    img->fill(colorBackround);
+
+    QPainter painter(img);
+    plot->render(&painter);
+
+    delete plot;
+
+    return img;
 }
 
-QwtPlot * Report::insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData, double *a, double *b)
+QImage * Report::insertGraph(QString title, QString strX, QString strY, QVector<double> xData, QVector<double> yData, double *a, double *b)
 {
     QwtPlot * plot = new QwtPlot();
+    plot->show();
     QVector<QPair<double,double>> dataEpsilon;
     if (xData.isEmpty() || yData.isEmpty())
-        return plot;
+        return nullptr;
 
+    plot->setStyleSheet(QString("background-color: %1;").arg(colorBackround.name()));
     double minValX = *std::min_element(xData.begin(), xData.end());
     double maxValX = *std::max_element(xData.begin(), xData.end());
 
     double minValY = *std::min_element(yData.begin(), yData.end());
     double maxValY = *std::max_element(yData.begin(), yData.end());
 
+    QwtScaleWidget *swX = plot->axisWidget(QwtPlot::xBottom);
+    QwtScaleWidget *swY = plot->axisWidget(QwtPlot::yLeft);
+
     QwtText tTitle (title);
+    QwtText xTitle(strX);
+    QwtText yTitle(strY);
+
+    QFont ticksFont;
     QFont font = tTitle.font();
-    font.setPointSize(26);
+    QFont axisTitleFont;
+
+    axisTitleFont.setPointSize(textSize);
+    font.setPointSize(textSize);
+    ticksFont.setPointSize(textSize);
+
     tTitle.setFont(font);
+    xTitle.setFont(axisTitleFont);
+    yTitle.setFont(axisTitleFont);
+
     plot->setTitle(tTitle);
-    plot->setCanvasBackground(colorBackround);
-    plot->setAxisTitle(QwtPlot::xBottom, strX);
-    plot->setAxisTitle(QwtPlot::yLeft, strY);
+    swX->setFont(ticksFont);
+    swY->setFont(ticksFont);
+
+    plot->setAxisTitle(QwtPlot::xBottom, xTitle);
+    plot->setAxisTitle(QwtPlot::yLeft, yTitle);
     plot->setAxisScale(QwtPlot::xBottom, minValX, maxValX);
     plot->setAxisScale(QwtPlot::yLeft, minValY, maxValY);
 
@@ -262,7 +311,7 @@ QwtPlot * Report::insertGraph(QString title, QString strX, QString strY, QVector
         QwtSymbol::Ellipse,
         QBrush(Qt::black),
         QPen(colorGraph1),
-        QSize(1, 1)
+        QSize(lineSize, lineSize)
         ));
 
     curv->attach(plot);
@@ -271,11 +320,6 @@ QwtPlot * Report::insertGraph(QString title, QString strX, QString strY, QVector
     grid->setMajorPen(QPen(Qt::lightGray, 1, Qt::DashLine));
     grid->setMinorPen(QPen(Qt::gray, 0.5, Qt::DotLine));
     grid->attach(plot);
-
-
-    int width = fmax(800, xData.size() / 100);
-    int height = fmax(600, yData.size() / 100);
-    plot->resize(width, height);
 
     //ed
     for (int i = 0;  i < yData.size(); i++)
@@ -293,24 +337,35 @@ QwtPlot * Report::insertGraph(QString title, QString strX, QString strY, QVector
 
         QwtPlotCurve *line = new QwtPlotCurve("y = ax + b");
         line->setSamples(xLine, yLine);
-        line->setPen(QPen(colorGraph2, 1.5, Qt::SolidLine)); // стиль линии
+        line->setPen(QPen(colorGraph2, lineSize, Qt::SolidLine));
         line->attach(plot);
     }
 
+    plot->resize(width, height);
     plot->replot();
-    return plot;
+    QImage *img = new QImage(width, height, QImage::Format_ARGB32);
+    img->fill(colorBackround);
+    QPainter painter(img);
+    plot->render(&painter);
+
+    delete plot;
+
+    return img;
 }
 
-QwtPlot * Report::insertGraph(QString title, QString strX, QString strY, QString strY2, QVector<double> xData, QVector<double> yData, QVector<double> yData2)
+QImage * Report::insertGraph(QString title, QString strX, QString strY, QString strY2, QVector<double> xData, QVector<double> yData, QVector<double> yData2)
 {
-    QwtPlot * plot;
+    QwtPlot * plot = new QwtPlot();
+    plot->enableAxis(QwtPlot::yRight,true);
+    plot->show();
+
     double minValX = *std::min_element(xData.begin(), xData.end());
     double maxValX = *std::max_element(xData.begin(), xData.end());
 
-    double minValY = *std::min_element(yData.begin(), yData.end());
-    double maxValY = *std::max_element(yData.begin(), yData.end());
-    double minValY2 = *std::min_element(yData2.begin(), yData2.end());
-    double maxValY2 = *std::max_element(yData2.begin(), yData2.end());
+    double minValY = *std::min_element(yData.begin(), yData.end()) * 0.8;
+    double maxValY = *std::max_element(yData.begin(), yData.end()) * 1.2;
+    double minValY2 = *std::min_element(yData2.begin(), yData2.end()) * 0.8;
+    double maxValY2 = *std::max_element(yData2.begin(), yData2.end()) * 1.2;
 
     if (minValY2 < minValY)
     {
@@ -322,44 +377,312 @@ QwtPlot * Report::insertGraph(QString title, QString strX, QString strY, QString
         maxValY = maxValY2;
     }
 
+    plot->setStyleSheet(QString("background-color: %1").arg(colorBackround.name()));
+
     QwtText tTitle (title);
+    QwtText xTitle(strX);
+    QwtText yTitle(strY);
+
+    QFont ticksFont;
     QFont font = tTitle.font();
-    font.setPointSize(26);
+    QFont axisTitleFont;
+
+    axisTitleFont.setPointSize(textSize);
+    font.setPointSize(textSize);
+    ticksFont.setPointSize(textSize);
+    plot->setAxisScaleDraw(QwtPlot::xBottom, new TickDrawX(ticksFont));
+    plot->setAxisScaleDraw(QwtPlot::yLeft,   new TickDrawY(ticksFont));
+    plot->setAxisScaleDraw(QwtPlot::yRight,   new TickDrawY(ticksFont));
+
     tTitle.setFont(font);
+    xTitle.setFont(axisTitleFont);
+    yTitle.setFont(axisTitleFont);
+
     plot->setTitle(tTitle);
-    plot->setCanvasBackground(colorBackround);
-    plot->setAxisTitle(QwtPlot::xBottom, strX);
-    plot->setAxisTitle(QwtPlot::yLeft, strY);
+
+    plot->setAxisTitle(QwtPlot::xBottom, xTitle);
+    plot->setAxisTitle(QwtPlot::yLeft, yTitle);
     plot->setAxisScale(QwtPlot::xBottom, minValX, maxValX);
     plot->setAxisScale(QwtPlot::yLeft, minValY, maxValY);
+    plot->setAxisScale(QwtPlot::yRight, minValY2, maxValY2);
 
     QwtPlotCurve *curv = new QwtPlotCurve("");
     curv->setSamples(xData, yData);
-    curv->setPen(QPen(colorGraph1,1.1));
+    curv->setPen(QPen(colorGraph1,lineSize));
     curv->attach(plot);
+
+    QwtText txt = QwtText("ε");
+    txt.setFont(font);
+    int pointToText = std::distance(yData.begin(),std::max_element(yData.begin(),yData.end()));
+    QwtPlotMarker *m = new QwtPlotMarker();
+    m->setValue(xData[pointToText], yData[pointToText]);
+    m->setLabel(txt);
+    m->setLabelAlignment(Qt::AlignCenter | Qt::AlignTop);
+    QwtSymbol *sym = new QwtSymbol(QwtSymbol::Ellipse,
+                                   QBrush(colorGraph1),
+                                   QPen(colorGraph1),
+                                   QSize(lineSize, lineSize));
+    m->setSymbol(sym);
+    m->setLineStyle(QwtPlotMarker::NoLine);
+    m->attach(plot);
 
     QwtPlotCurve *curv2 = new QwtPlotCurve("");
     curv2->setSamples(xData, yData2);
-    curv2->setPen(QPen(colorGraph2,1.1));
+    curv2->setPen(QPen(colorGraph2,lineSize));
     curv2->attach(plot);
+
+    txt = QwtText("PPR");
+    pointToText = std::distance(yData2.begin(),std::max_element(yData2.begin(),yData2.end()));
+    QwtPlotMarker *m2 = new QwtPlotMarker();
+    m2->setValue(xData[pointToText], yData2[pointToText]);
+    m2->setLabel(txt);
+    m2->setLabelAlignment(Qt::AlignCenter | Qt::AlignTop);
+    QwtSymbol *sym2 = new QwtSymbol(QwtSymbol::Ellipse,
+                                    QBrush(colorGraph2),
+                                    QPen(colorGraph2),
+                                    QSize(lineSize, lineSize));
+
+    m2->setSymbol(sym2);
+    m2->setLineStyle(QwtPlotMarker::NoLine);
+
+    m2->attach(plot);;
 
     QwtPlotGrid *grid = new QwtPlotGrid();
     grid->setMajorPen(QPen(Qt::lightGray, 1, Qt::DashLine));
     grid->setMinorPen(QPen(Qt::gray, 0.5, Qt::DotLine));
     grid->attach(plot);
 
-    int width = fmax(800, xData.size() / 100);
-    int height = fmax(600, yData.size() / 100);
-
     plot->resize(width, height);
-
     plot->replot();
-    return plot;
+    QImage *img = new QImage(width, height, QImage::Format_ARGB32);
+    img->fill(colorBackround); // или colorBackround если хочешь фон
+
+    QPainter painter(img);
+    plot->render(&painter);
+
+    delete plot;
+
+    return img;
+}
+
+void Report::addGraphInDocuments(QXlsx::Document *doc, QString title, QString strX, QString strY, QVector<double> vX, QVector<double> vY)
+{
+    doc->addSheet("График " +QString::number(countSheet+1));
+    doc->selectSheet("График " +QString::number(countSheet+1));
+    doc->write(1,1,strX);
+    doc->write(1,2,strY);
+
+    for (int i = 0; i < vX.length(); i++)
+    {
+        doc->write(i+2,1,vX[i]);
+        doc->write(i+2,2,vY[i]);
+    }
+
+    doc->selectSheet("Отчет");
+    auto sheet = doc->sheet("График " +QString::number(countSheet+1));
+
+    QXlsx::Chart * chart = doc->insertChart(1, 5 + countSheet * 30,QSize(800, 600));
+    chart->setChartType(QXlsx::Chart::CT_ScatterChart);
+
+    chart->setChartTitle(title);
+    QXlsx::CellRange range(1, 1, vX.size()+1, 2);
+    chart->setAxisTitle(QXlsx::Chart::Bottom,strX);
+    chart->setAxisTitle(QXlsx::Chart::Left,strY);
+
+    chart->addSeries(range,sheet,true,false);
+
+
+    countSheet++;
+}
+
+void Report::refresh()
+{
+    QSettings setting ("settings.ini", QSettings::IniFormat);
+    colorGraph1 = QColor(setting.value("color/graph1").isValid() ? QColor(setting.value("color/graph1").toString()) : QColor(Qt::green));
+    colorGraph2 = QColor(setting.value("color/graph2").isValid() ? QColor(setting.value("color/graph2").toString()) : QColor(Qt::red));
+    colorBackround= QColor(setting.value("color/backround").isValid() ? QColor(setting.value("color/backround").toString()) : QColor(Qt::white));
+    colorText = QColor(setting.value("color/font").isValid() ? QColor(setting.value("color/font").toString()) : QColor(Qt::black));
+
+    width = setting.value("size/width",400).toInt();
+    height = setting.value("size/height",600).toInt();
+    textSize = setting.value("size/text",12).toInt();
+    lineSize = setting.value("size/chart",1.5).toDouble();
+    setting.sync();
+}
+
+//Cейсмо
+void Report::reportToFileExcelSeismic(const vibroData *data)
+{
+    refresh();
+    positionImg = 1;
+    QString pathToFolder = QFileDialog::getSaveFileName(NULL, QObject::tr("Введите имя отчёта"),QString(), QObject::tr("Папка отчета"));
+
+    if (!pathToFolder.isEmpty())
+    {
+        QFileInfo fi(pathToFolder);
+        reportDir = fi.absolutePath() + "/" + fi.baseName();
+
+        QDir dir;
+        if (!dir.exists(reportDir))
+            dir.mkdir(reportDir);
+
+        QXlsx::Document doc;
+
+        QXlsx::Format left;
+        left.setHorizontalAlignment(QXlsx::Format::AlignLeft);
+        QVector<double> XData, YData, ZData;
+
+        doc.setColumnWidth(1,25);
+        doc.write(1,1,"Высота");
+        doc.write(1,2,QString::number(data->steps[0].m_h0) + " мм.");
+        doc.write(2,1,"Диаметр");
+        doc.write(2,2, QString::number(data->steps[0].m_d0) + " мм.");
+        doc.write(3,1,"Амплитуда");
+        doc.write(3,2, QString::number(data->ampl/2) + " кПа.");
+        doc.write(4,1,"Частота");
+        doc.write(4,2, QString::number(data->frequency) + " Гц");
+        doc.write(5,1,"Количество циклов");
+        doc.write(5,2, data->minPoints.size(),left );
+
+        doc.renameSheet("Sheet1","Отчет") ? qDebug() << "Good" : qDebug() << "Not good";
+
+        for(const stepVibro &el:data->steps)
+        {
+            if (el.PPR >= 1.0f)
+            {
+                doc.write(6,1,"Факт разжижения зафиксирован на " + QString::number(el.numberTact));
+                doc.write(7,1, "Критерий : PPR = " + QString::number(el.PPR));
+                doc.write(8,1, "Разжижение наступило");
+                break;
+            }
+            if (el.PPR >= 0.95 and el.epsilon_ > 0.05)
+            {
+                doc.write(6,1, "Факт разжижения зафиксирован на " + QString::number(el.numberTact));
+                doc.write(7,1, "Критерий кобинированный : PPR = " + QString::number(el.PPR) + ", ε = " + QString::number(el.epsilon_) + " %");
+                doc.write(8,1, "Разжижение наступило");
+                break;
+            }
+            doc.write(6,1, "Разжижение не наступило");
+        }
+
+
+        //-----------------------Графики
+        for (const stepVibro &el : data->steps)
+        {
+            YData.append(el.epsilon_ * 100); //Потому что в графике проценты
+        }
+        XData = convertToN(data);
+        // savePlotAsSvg(insertGraph("График зависимости осевой деформации","Число циклов нагружения N","Осевая деформация ε, %",XData, YData),reportDir + "/График зависимости осевой деформации.svg");
+        // doc.write(1,5,"=HYPERLINK(\"График зависимости осевой деформации.svg\", \"График зависимости осевой деформации\")");
+        // addGraphInDocuments(&doc,"График зависимости осевой деформации","X","Y",XData, YData);
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деформации","Число циклов нагружения N","Осевая деформация ε, %",XData, YData));
+        positionImg = positionImg + height / 20 + 4;
+        XData.clear();
+        YData.clear();
+
+        for(const stepVibro &el : data->steps)
+        {
+            YData.append(el.epsilon_ * 100);
+            ZData.append(el.PPR);
+        }
+        XData = convertToN(data);
+        doc.insertImage(positionImg,5,*insertGraph("График зависимоисти осевой деф. и относ. порового давления от числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",
+                                                     "Отностительное поровое давление PPR",XData, YData, ZData));
+        positionImg = positionImg + height / 20 + 4;
+        XData.clear();
+        YData.clear();
+        ZData.clear();
+
+
+        for (const stepVibro &el : data->steps)
+        {
+            YData.append(el.PPR * 100); //Потому что в графике проценты
+        }
+        XData = convertToN(data);
+        //savePlotAsSvg(insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData),reportDir + "/График зависимости относительного порового давления от числа циклов динамического нагружения.svg");
+        //doc.write(2,5,"=HYPERLINK(\"График зависимости относительного порового давления от числа циклов динамического нагружения.svg\", \"График зависимости относительного порового давления от числа циклов динамического нагружения\")");
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData));
+        positionImg = positionImg + height / 20 + 4;
+        XData.clear();
+        YData.clear();
+
+
+        for (const stepVibro &el : data->steps)
+        {
+            YData.append(el.q);
+            XData.append(el.p_);
+        }
+        //savePlotAsSvg(insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData),reportDir + "/График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg");
+        //doc.write(3,5,"=HYPERLINK(\"График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg\", \"График зависимости максимальных касательных напряжений от средних эффективных напряжений\")");
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData));
+        positionImg = positionImg + height / 20 + 4;
+        XData.clear();
+        YData.clear();
+
+
+        for (const stepVibro &el : data->steps)
+        {
+            YData.append(el.m_verticalPressure_kPa);
+        }
+        XData = convertToN(data);
+        //savePlotAsSvg(insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData),reportDir + "/График зависимости напряжения от времени.svg");
+        //doc.write(4,5,"=HYPERLINK(\"График зависимости напряжения от времени.svg\", \"График зависимости напряжения от времени\")");
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
+        positionImg = positionImg + height / 20 + 4;
+        XData.clear();
+        YData.clear();
+
+        double w = getW(&XData,&YData,data);
+        doc.write(9,1,"ΔW");
+        doc.write(9,2,QString::number(w,'f',6) + " кПа.");
+        //savePlotAsSvg(insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData),reportDir + "/График Σ–Ε.svg");
+        //doc.write(5,5,"=HYPERLINK(\"График Σ–Ε.svg\", \"График Σ–Ε\")");
+        doc.insertImage(positionImg,5, *insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
+        positionImg = positionImg + height / 20 + 4;
+
+
+        QXlsx::RichString r;
+        QXlsx::Format normal;
+        QXlsx::Format sub;
+        QXlsx::Format sup;
+        sup.setFontScript(QXlsx::Format::FontScriptSuper);
+        sub.setFontScript(QXlsx::Format::FontScriptSub);
+
+
+        double moduleDeform;
+        //savePlotAsSvg(getModulsDeforms(data, &moduleDeform, true),reportDir + "/Eyd.svg");
+        // doc.write(7,5,"=HYPERLINK(\"Eyd.svg\", \"Eyd.svg\")");
+        doc.insertImage(positionImg,5, *getModulsDeforms(data, &moduleDeform, true));
+        positionImg = positionImg + height / 20 + 4;
+
+        r.addFragment("E", normal);
+        r.addFragment("y",sup);
+        r.addFragment("d",sub);
+        doc.write(7,1,r);
+        doc.write(7,2,QString::number(moduleDeform) + " МПа.");
+
+        //savePlotAsSvg(getModulsDeforms(data, &moduleDeform, false),reportDir + "/Ed.svg");
+        //doc.write(8,5,"=HYPERLINK(\"Ed.svg\", \"Ed\")");
+        doc.insertImage(positionImg,5, *getModulsDeforms(data, &moduleDeform, false));
+        positionImg = positionImg + height / 20 + 4;
+        r = QXlsx::RichString();
+        r.addFragment("E", normal);
+        r.addFragment("d",sub);
+        doc.write(8,1,r);
+        doc.write(8,2,QString::number(moduleDeform) + " МПа.");
+
+
+        doc.saveAs(reportDir + "/report.xlsx");
+        QDesktopServices::openUrl(QUrl::fromLocalFile(reportDir + "/report.xlsx"));
+    }
+
 }
 
 //Вибропазлучесть
 void Report::reportToFileExcelVibrocell(const vibroData* data)
 {
+    positionImg = 1;
+    refresh();
     if (data->minPoints.size() < 499)
     {
         QMessageBox::critical(nullptr, "Неверные данные","В вашей выгрузки колчиество циклов составляет " +
@@ -385,7 +708,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     left.setHorizontalAlignment(QXlsx::Format::AlignLeft);
     doc.write("A1","Test");
     qDebug() << "QApplication instance pointer:" << QCoreApplication::instance();
-    QVector<double> XData, YData, YData2;
+    QVector<double> XData, YData, YData2, ZData;
 
     doc.setColumnWidth(1,25);
     doc.write(1,1,"Высота");
@@ -425,12 +748,26 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
             YData.append(el.epsilon_ * 100); //Потому что в графике проценты
     }
     XData = convertToN(data);
-    savePlotAsSvg(insertGraph("График зависимости осевой деформации","Число циклов нагружения N","Осевая деформация ε, %",XData, YData),
-                  reportDir + "/График зависимости осевой деформации.svg");
-    doc.write(1,5,"=HYPERLINK(\"График зависимости осевой деформации.svg\", \"График зависимости осевой деформации\")");
-    // doc.insertImage(1,5,insertGraph("График зависимости осевой деформации","Число циклов нагружения N","Осевая деформация ε, %",XData, YData));
+    //savePlotAsSvg(insertGraph("График зависимости осевой деформации","Число циклов нагружения N","Осевая деформация ε, %",XData, YData),
+    //              reportDir + "/График зависимости осевой деформации.svg");
+    //doc.write(1,5,"=HYPERLINK(\"График зависимости осевой деформации.svg\", \"График зависимости осевой деформации\")");
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деформации","Число циклов нагружения N","Осевая деформация ε, %",XData, YData));
+    positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();
+
+    for(const stepVibro &el : data->steps)
+    {
+        YData.append(el.epsilon_ * 100);
+        ZData.append(el.PPR);
+    }
+    XData = convertToN(data);
+    doc.insertImage(positionImg,5,*insertGraph("График зависимоисти осевой деф. и относ. порового давления от числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",
+                                                 "Отностительное поровое давление PPR",XData, YData, ZData));
+    positionImg = positionImg + height / 20 + 4;
+    XData.clear();
+    YData.clear();
+    ZData.clear();
 
 
     for (const stepVibro &el : data->steps)
@@ -438,9 +775,10 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
             YData.append(el.PPR * 100); //Потому что в графике проценты
     }
     XData = convertToN(data);
-    savePlotAsSvg(insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData),reportDir + "/График зависимости относительного порового давления от числа циклов динамического нагружения.svg");
-    doc.write(2,5,"=HYPERLINK(\"График зависимости относительного порового давления от числа циклов динамического нагружения.svg\", \"График зависимости относительного порового давления от числа циклов динамического нагружения\")");
-    // doc.insertImage(1,16,insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData));
+    //savePlotAsSvg(insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData),reportDir + "/График зависимости относительного порового давления от числа циклов динамического нагружения.svg");
+    //doc.write(2,5,"=HYPERLINK(\"График зависимости относительного порового давления от числа циклов динамического нагружения.svg\", \"График зависимости относительного порового давления от числа циклов динамического нагружения\")");
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData));
+    positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();
 
@@ -449,9 +787,10 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
             YData.append(el.q);
             XData.append(el.p_);
     }
-    savePlotAsSvg(insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData),reportDir + "/График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg");
-    doc.write(3,5,"=HYPERLINK(\"График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg\", \"График зависимости максимальных касательных напряжений от средних эффективных напряжений\")");
-    // doc.insertImage(22,5,insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData));
+    //savePlotAsSvg(insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData),reportDir + "/График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg");
+    //doc.write(3,5,"=HYPERLINK(\"График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg\", \"График зависимости максимальных касательных напряжений от средних эффективных напряжений\")");
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData));
+    positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();
 
@@ -461,23 +800,26 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
         YData.append(el.m_verticalPressure_kPa);
     }
     XData = convertToN(data);
-    savePlotAsSvg(insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData),reportDir + "/График зависимости напряжения от времени.svg");
-    doc.write(4,5,"=HYPERLINK(\"График зависимости напряжения от времени.svg\", \"График зависимости напряжения от времени\")");
-    // doc.insertImage(22,16,insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
+    //savePlotAsSvg(insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData),reportDir + "/График зависимости напряжения от времени.svg");
+    //doc.write(4,5,"=HYPERLINK(\"График зависимости напряжения от времени.svg\", \"График зависимости напряжения от времени\")");
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
+    positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();
 
     double w = getW(&XData,&YData,data);
     doc.write(9,1,"ΔW");
     doc.write(9,2,QString::number(w,'f',6) + " кПа.");
-    savePlotAsSvg(insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData),reportDir + "/График Σ–Ε.svg");
-    doc.write(5,5,"=HYPERLINK(\"График Σ–Ε.svg\", \"График Σ–Ε\")");
-    // doc.insertImage(43,5, insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
+    //savePlotAsSvg(insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData),reportDir + "/График Σ–Ε.svg");
+    //doc.write(5,5,"=HYPERLINK(\"График Σ–Ε.svg\", \"График Σ–Ε\")");
+    doc.insertImage(positionImg,5, *insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
+    positionImg = positionImg + height / 20 + 4;
 
     getXYDataEpsD(&XData,&YData,data);
-    savePlotAsSvg(insertGraph("ε = f(lnt)","Время, ln(мин.)","Осевая деформация ε, %",XData, YData,&a,&b),reportDir + "/ε = f(lnt).svg");
-    doc.write(6,5,"=HYPERLINK(\"ε = f(lnt).svg\", \"ε = f(lnt)\")");
-    // doc.insertImage(43,16,insertGraph("ε = f(lnt)","Время, ln(мин.)","Осевая деформация ε, %",XData, YData,&a,&b));
+    //savePlotAsSvg(insertGraph("ε = f(lnt)","Время, ln(мин.)","Осевая деформация ε, %",XData, YData,&a,&b),reportDir + "/ε = f(lnt).svg");
+    //doc.write(6,5,"=HYPERLINK(\"ε = f(lnt).svg\", \"ε = f(lnt)\")");
+    doc.insertImage(positionImg,5,*insertGraph("ε = f(lnt)","Время, ln(мин.)","Осевая деформация ε, %",XData, YData,&a,&b));
+    positionImg = positionImg + height / 20 + 4;
     doc.write(10,1,"a");
     doc.write(10,2, a);
     doc.write(11,1,"b");
@@ -492,16 +834,17 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     QXlsx::RichString r;
     QXlsx::Format normal;
     QXlsx::Format sub;
-        QXlsx::Format sup;
+    QXlsx::Format sup;
     sup.setFontScript(QXlsx::Format::FontScriptSuper);
     sub.setFontScript(QXlsx::Format::FontScriptSub);
 
 
     double moduleDeform;
 
-    savePlotAsSvg(getModulsDeforms(data, &moduleDeform, true),reportDir + "/Eyd.svg");
-    doc.write(7,5,"=HYPERLINK(\"Eyd.svg\", \"Eyd.svg\")");
-    // doc.insertImage(64,5, getModulsDeforms(data, &moduleDeform, true));
+    //savePlotAsSvg(getModulsDeforms(data, &moduleDeform, true),reportDir + "/Eyd.svg");
+    //doc.write(7,5,"=HYPERLINK(\"Eyd.svg\", \"Eyd.svg\")");
+    doc.insertImage(positionImg,5, *getModulsDeforms(data, &moduleDeform, true));
+    positionImg = positionImg + height / 20 + 4;
     r.addFragment("E", normal);
     r.addFragment("y",sup);
     r.addFragment("d",sub);
@@ -509,9 +852,10 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     doc.write(7,2,QString::number(moduleDeform) + " МПа.");
 
 
-    savePlotAsSvg(getModulsDeforms(data, &moduleDeform, false),reportDir + "/Ed.svg");
-    doc.write(8,5,"=HYPERLINK(\"Ed.svg\", \"Ed\")");
-    // doc.insertImage(64,16, getModulsDeforms(data, &moduleDeform, false));
+    //savePlotAsSvg(getModulsDeforms(data, &moduleDeform, false),reportDir + "/Ed.svg");
+    //doc.write(8,5,"=HYPERLINK(\"Ed.svg\", \"Ed\")");
+    doc.insertImage(positionImg,5, *getModulsDeforms(data, &moduleDeform, false));
+    positionImg = positionImg + height / 20 + 4;
     r = QXlsx::RichString();
     r.addFragment("E", normal);
     r.addFragment("d",sub);
@@ -521,149 +865,6 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     doc.saveAs(reportDir + "/report.xlsx");
     QDesktopServices::openUrl(QUrl::fromLocalFile(reportDir + "/report.xlsx"));
     }
-
-}
-
-//Cейсмо
-void Report::reportToFileExcelSeismic(const vibroData *data)
-{
-
-    QString pathToFolder = QFileDialog::getSaveFileName(NULL, QObject::tr("Введите имя отчёта"),QString(), QObject::tr("Папка отчета"));
-
-    if (!pathToFolder.isEmpty())
-    {
-
-        QFileInfo fi(pathToFolder);
-        reportDir = fi.absolutePath() + "/" + fi.baseName();
-
-        QDir dir;
-        if (!dir.exists(reportDir))
-            dir.mkdir(reportDir);
-
-        QXlsx::Document doc;
-        QXlsx::Format left;
-        left.setHorizontalAlignment(QXlsx::Format::AlignLeft);
-        QVector<double> XData, YData;
-
-        doc.setColumnWidth(1,25);
-        doc.write(1,1,"Высота");
-        doc.write(1,2,QString::number(data->steps[0].m_h0) + " мм.");
-        doc.write(2,1,"Диаметр");
-        doc.write(2,2, QString::number(data->steps[0].m_d0) + " мм.");
-        doc.write(3,1,"Амплитуда");
-        doc.write(3,2, QString::number(data->ampl/2) + " кПа.");
-        doc.write(4,1,"Частота");
-        doc.write(4,2, QString::number(data->frequency) + " Гц");
-        doc.write(5,1,"Количество циклов");
-        doc.write(5,2, data->minPoints.size(),left );
-
-        for(const stepVibro &el:data->steps)
-        {
-            if (el.PPR >= 1.0f)
-            {
-                doc.write(6,1,"Факт разжижения зафиксирован на " + QString::number(el.numberTact));
-                doc.write(7,1, "Критерий : PPR = " + QString::number(el.PPR));
-                doc.write(8,1, "Разжижение наступило");
-                break;
-            }
-            if (el.PPR >= 0.95 and el.epsilon_ > 0.05)
-            {
-                doc.write(6,1, "Факт разжижения зафиксирован на " + QString::number(el.numberTact));
-                doc.write(7,1, "Критерий кобинированный : PPR = " + QString::number(el.PPR) + ", ε = " + QString::number(el.epsilon_) + " %");
-                doc.write(8,1, "Разжижение наступило");
-                break;
-            }
-            doc.write(6,1, "Разжижение не наступило");
-        }
-
-
-        //-----------------------Графики
-        for (const stepVibro &el : data->steps)
-        {
-            YData.append(el.epsilon_ * 100); //Потому что в графике проценты
-        }
-        XData = convertToN(data);
-        savePlotAsSvg(insertGraph("График зависимости осевой деформации","Число циклов нагружения N","Осевая деформация ε, %",XData, YData),reportDir + "/График зависимости осевой деформации.svg");
-        doc.write(1,5,"=HYPERLINK(\"График зависимости осевой деформации.svg\", \"График зависимости осевой деформации\")");
-        XData.clear();
-        YData.clear();
-
-
-        for (const stepVibro &el : data->steps)
-        {
-            YData.append(el.PPR * 100); //Потому что в графике проценты
-        }
-        XData = convertToN(data);
-        savePlotAsSvg(insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData),reportDir + "/График зависимости относительного порового давления от числа циклов динамического нагружения.svg");
-        doc.write(2,5,"=HYPERLINK(\"График зависимости относительного порового давления от числа циклов динамического нагружения.svg\", \"График зависимости относительного порового давления от числа циклов динамического нагружения\")");
-        //doc.insertImage(1,16,insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData));
-        XData.clear();
-        YData.clear();
-
-
-        for (const stepVibro &el : data->steps)
-        {
-            YData.append(el.q);
-            XData.append(el.p_);
-        }
-        savePlotAsSvg(insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData),reportDir + "/График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg");
-        doc.write(3,5,"=HYPERLINK(\"График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg\", \"График зависимости максимальных касательных напряжений от средних эффективных напряжений\")");
-        //doc.insertImage(22,5,insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData));
-        XData.clear();
-        YData.clear();
-
-
-        for (const stepVibro &el : data->steps)
-        {
-            YData.append(el.m_verticalPressure_kPa);
-        }
-        XData = convertToN(data);
-        savePlotAsSvg(insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData),reportDir + "/График зависимости напряжения от времени.svg");
-        doc.write(4,5,"=HYPERLINK(\"График зависимости напряжения от времени.svg\", \"График зависимости напряжения от времени\")");
-        //doc.insertImage(22,16,insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
-        XData.clear();
-        YData.clear();
-
-        double w = getW(&XData,&YData,data);
-        doc.write(9,1,"ΔW");
-        doc.write(9,2,QString::number(w,'f',6) + " кПа.");
-        savePlotAsSvg(insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData),reportDir + "/График Σ–Ε.svg");
-        doc.write(5,5,"=HYPERLINK(\"График Σ–Ε.svg\", \"График Σ–Ε\")");
-        //doc.insertImage(43,5, insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
-
-
-        QXlsx::RichString r;
-        QXlsx::Format normal;
-        QXlsx::Format sub;
-        QXlsx::Format sup;
-        sup.setFontScript(QXlsx::Format::FontScriptSuper);
-        sub.setFontScript(QXlsx::Format::FontScriptSub);
-
-
-        double moduleDeform;
-        savePlotAsSvg(getModulsDeforms(data, &moduleDeform, true),reportDir + "/Eyd.svg");
-        doc.write(7,5,"=HYPERLINK(\"Eyd.svg\", \"Eyd.svg\")");
-        // doc.insertImage(64,5, getModulsDeforms(data, &moduleDeform, true));
-        r.addFragment("E", normal);
-        r.addFragment("y",sup);
-        r.addFragment("d",sub);
-        doc.write(7,1,r);
-        doc.write(7,2,QString::number(moduleDeform) + " МПа.");
-
-        savePlotAsSvg(getModulsDeforms(data, &moduleDeform, false),reportDir + "/Ed.svg");
-        doc.write(8,5,"=HYPERLINK(\"Ed.svg\", \"Ed\")");
-        // doc.insertImage(64,16, getModulsDeforms(data, &moduleDeform, false));
-        r = QXlsx::RichString();
-        r.addFragment("E", normal);
-        r.addFragment("d",sub);
-        doc.write(8,1,r);
-        doc.write(8,2,QString::number(moduleDeform) + " МПа.");
-
-
-        doc.saveAs(reportDir + "/report.xlsx");
-        QDesktopServices::openUrl(QUrl::fromLocalFile(reportDir + "/report.xlsx"));
-    }
-
 
 }
 
