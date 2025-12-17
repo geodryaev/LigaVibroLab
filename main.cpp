@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include <QApplication>
+#include <QStyleFactory>
 #include <QIcon>
 
 int main(int argc, char *argv[])
@@ -11,7 +12,7 @@ int main(int argc, char *argv[])
         a.setStyleSheet(style);
     }
     a.setWindowIcon(QIcon(":/files/icon.png"));
-
+    a.setStyle(QStyleFactory::create("Fusion"));
     MainWindow w;
     w.setWindowIcon(QIcon(":/files/icon.png"));
     w.show();

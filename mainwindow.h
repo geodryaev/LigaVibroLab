@@ -34,7 +34,7 @@ private:
     double height;
 private slots:
     void on_calculateVibro_clicked();
-
+    void smooth_graph();
     void on_action_triggered();
     void on_calculateVibro_2_clicked();
     void on_action_2_triggered();

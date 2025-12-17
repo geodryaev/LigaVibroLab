@@ -7,6 +7,10 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
+if(NOT DEFINED VCPKG_INSTALLED_DIR)
+    set(VCPKG_INSTALLED_DIR "C:/vcpkg/installed")
+endif()
+
 #if(MSVC)
 #  cmake_policy(SET CMP0091 NEW)
 #  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<#$<CONFIG:Debug>:Debug>DLL")
@@ -42,6 +46,8 @@ add_executable(VibroProcessing WIN32
   supportmodul.h supportmodul.cpp supportmodul.ui
   resources.qrc
   chartsettings.h chartsettings.cpp chartsettings.ui
+  funcExtension.h
+  funcExtension.cpp
 )
 
 target_include_directories(VibroProcessing PRIVATE ${QWT_INCLUDE_DIR})

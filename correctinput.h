@@ -27,17 +27,27 @@ class correctInput : public QDialog
     Q_OBJECT
 
 public:
-    explicit correctInput(QWidget *parent = nullptr, vibroData * data = nullptr);
+    explicit correctInput(vibroData * data, const double max, const double min, const double freq, QWidget *parent = nullptr);
     ~correctInput();
 
 private:
+    double min;
+    double max;
+    double freq;
+    double minX;
+    double maxX;
+    double phi = 0;
+
     Ui::correctInput *ui;
     QwtPlot* plot;
     QVector<QPointF> selectPoint;
     QVector<QwtPlotMarker*> selectedMarkers;
     QwtPlotPicker * picker;
     vibroData * data;
-
+    QwtPlotCurve * sineCurv;
+private slots:
+    void addSineStencil(bool checked);
+    void changeValueHorisontal(int value);
 private slots:
     void onPointClick(const QPointF &point);
     void on_pushButton_clicked();

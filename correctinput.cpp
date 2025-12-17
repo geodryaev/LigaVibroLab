@@ -4,14 +4,29 @@
 #include "stepvibro.h"
 #include "correctinput.h"
 
-correctInput::correctInput(QWidget *parent, vibroData * data)
-    : QDialog(parent)
-    , ui(new Ui::correctInput)
+correctInput::correctInput(vibroData * data, const double max, const double min, const double freq, QWidget *parent)
+    : QDialog(parent),
+    max(max),
+    min(min),
+    freq(freq),
+    data(data),
+    ui(new Ui::correctInput)
 {
     ui->setupUi(this);
+    ui->min->setValue(min);
+    ui->max->setValue(max);
+    ui->freq->setValue(freq);
+    ui->sinPosGorizont->setStyleSheet(R"(QSlider::sub-page:horizontal {background: transparent;})");
+    ui->sinPosGorizont->hide();
+    ui->sinPosGorizont->setMinimum(-1000);
+    ui->sinPosGorizont->setMaximum(1000);
+
+    connect(ui->cheack,&QRadioButton::toggled,this,&correctInput::addSineStencil);
+    connect(ui->sinPosGorizont,&QSlider::valueChanged, this, &correctInput::changeValueHorisontal);
+
     QVector<double>XData;
     QVector<double>YData;
-    this->data = data;
+
     for (const stepVibro &el : std::as_const(data->steps))
     {
         YData.append(el.m_verticalPressure_kPa);
@@ -21,6 +36,8 @@ correctInput::correctInput(QWidget *parent, vibroData * data)
         plot = new QwtPlot(this);
         double minValX = *std::min_element(XData.begin(), XData.end());
         double maxValX = *std::max_element(XData.begin(), XData.end());
+        minX= minValX;
+        maxX= maxValX;
 
         double minValY = *std::min_element(YData.begin(), YData.end());
         double maxValY = *std::max_element(YData.begin(), YData.end());
@@ -33,7 +50,7 @@ correctInput::correctInput(QWidget *parent, vibroData * data)
 
         QwtPlotCurve *curv = new QwtPlotCurve("");
         curv->setSamples(XData, YData);
-        curv->setPen(QPen(Qt::black,2));
+        curv->setPen(QPen(Qt::red,3));
         curv->attach(plot);
 
         QwtPlotGrid *grid = new QwtPlotGrid();
@@ -73,6 +90,64 @@ correctInput::correctInput(QWidget *parent, vibroData * data)
 correctInput::~correctInput()
 {
     delete ui;
+}
+
+void correctInput::addSineStencil(bool checked)
+{
+    min = ui->min->value();
+    max = ui->max->value();
+    freq = ui->freq->value();
+
+    if (checked)
+    {
+        ui->sinPosGorizont->show();
+        ui->max->hide();
+        ui->min->hide();
+        ui->freq->hide();
+        ui->label_4->hide();
+        ui->label_5->hide();
+        ui->label_6->hide();
+
+        sineCurv = new QwtPlotCurve();
+        double ampl = (max-min)/2;
+        double yOffset = min + ampl;
+        double dt = 0.0001;
+        double y;
+        QVector<QPointF> points;
+
+        for (double x = minX; x < maxX; x+=dt)
+        {
+            y = ampl * std::sin(2 * M_PI * ui->freq->value() * x * 60 + phi) + yOffset;
+            points.append(QPointF(x,y));
+        }
+        sineCurv->setSamples(points);
+        sineCurv->setPen(QPen(Qt::blue,4, Qt::DashLine));
+        sineCurv->attach(plot);
+        plot->replot();
+    }
+    else
+    {
+        ui->sinPosGorizont->hide();
+        ui->max->show();
+        ui->min->show();
+        ui->freq->show();
+        ui->label_4->show();
+        ui->label_5->show();
+        ui->label_6->show();
+
+        sineCurv->detach();
+        delete(sineCurv);
+        plot->replot();
+    }
+}
+
+void correctInput::changeValueHorisontal(int value)
+{
+    phi = M_PI * value / 1000;
+    sineCurv->detach();
+    delete(sineCurv);
+    plot->replot();
+    addSineStencil(true);
 }
 
 void correctInput::onPointClick(const QPointF &point)
