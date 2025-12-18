@@ -18,12 +18,18 @@ correctInput::correctInput(vibroData * data, const double max, const double min,
     ui->freq->setValue(freq);
     ui->sinPosGorizont->setStyleSheet(R"(QSlider::sub-page:horizontal {background: transparent;})");
     ui->sinPosGorizont->hide();
+    ui->autoAdjustmen->hide();
     ui->sinPosGorizont->setMinimum(-1000);
     ui->sinPosGorizont->setMaximum(1000);
+    ui->sinPosGorizont->setValue(0);
+    ui->progressBar->setMaximum(static_cast<int>(M_PI * 2 * 100));
+    ui->progressBar->hide();
 
     connect(ui->cheack,&QRadioButton::toggled,this,&correctInput::addSineStencil);
     connect(ui->sinPosGorizont,&QSlider::valueChanged, this, &correctInput::changeValueHorisontal);
 
+    sineCurv = new QwtPlotCurve();
+    sineCurv->setPen(QPen(Qt::blue, 4, Qt::DashLine));
     QVector<double>XData;
     QVector<double>YData;
 
@@ -92,6 +98,30 @@ correctInput::~correctInput()
     delete ui;
 }
 
+unsigned long long correctInput::errorMetrick()
+{
+    unsigned long long distance = 0;
+    qDebug() << "Real\t--\tVirtual";
+    for (int i = 0; i < data->steps.size(); i++)
+    {
+        distance += std::abs(data->steps[i].m_verticalPressure_kPa - pointsTemplatesGraph[i].y());
+        //qDebug() << data->steps[i].m_time << "\t--\t" << pointsTemplatesGraph[i].x();
+    }
+    return distance;
+}
+
+void correctInput::transformSinToRealData(double a)
+{
+    double ampl = (max-min)/2;
+    double yOffset = min + ampl;
+
+    pointsTemplatesGraph.clear();
+    for(auto  it : data->steps)
+    {
+        pointsTemplatesGraph.append(QPointF(it.m_time, ampl * std::sin(2 * M_PI * ui->freq->value() * it.m_time * 60 + a) + yOffset));
+    }
+}
+
 void correctInput::addSineStencil(bool checked)
 {
     min = ui->min->value();
@@ -101,6 +131,7 @@ void correctInput::addSineStencil(bool checked)
     if (checked)
     {
         ui->sinPosGorizont->show();
+        ui->autoAdjustmen->show();
         ui->max->hide();
         ui->min->hide();
         ui->freq->hide();
@@ -108,26 +139,26 @@ void correctInput::addSineStencil(bool checked)
         ui->label_5->hide();
         ui->label_6->hide();
 
-        sineCurv = new QwtPlotCurve();
+        pointsTemplatesGraph.clear();
         double ampl = (max-min)/2;
         double yOffset = min + ampl;
         double dt = 0.0001;
         double y;
-        QVector<QPointF> points;
+
 
         for (double x = minX; x < maxX; x+=dt)
         {
             y = ampl * std::sin(2 * M_PI * ui->freq->value() * x * 60 + phi) + yOffset;
-            points.append(QPointF(x,y));
+            pointsTemplatesGraph.append(QPointF(x,y));
         }
-        sineCurv->setSamples(points);
-        sineCurv->setPen(QPen(Qt::blue,4, Qt::DashLine));
+        sineCurv->setSamples(pointsTemplatesGraph);
         sineCurv->attach(plot);
         plot->replot();
     }
     else
     {
         ui->sinPosGorizont->hide();
+        ui->autoAdjustmen->hide();
         ui->max->show();
         ui->min->show();
         ui->freq->show();
@@ -136,7 +167,6 @@ void correctInput::addSineStencil(bool checked)
         ui->label_6->show();
 
         sineCurv->detach();
-        delete(sineCurv);
         plot->replot();
     }
 }
@@ -145,7 +175,6 @@ void correctInput::changeValueHorisontal(int value)
 {
     phi = M_PI * value / 1000;
     sineCurv->detach();
-    delete(sineCurv);
     plot->replot();
     addSineStencil(true);
 }
@@ -180,14 +209,16 @@ void correctInput::onPointClick(const QPointF &point)
     QwtPlotMarker *marker = new QwtPlotMarker();
     marker->setValue(point);
     marker->setSymbol(new QwtSymbol(QwtSymbol::Ellipse,
-                                    QBrush(Qt::red),
-                                    QPen(Qt::red),
+                                    QBrush(Qt::black),
+                                    QPen(Qt::black),
                                     QSize(8, 8)));
     marker->attach(plot);
 
     selectedMarkers.append(marker);  // сохраняем маркер
     plot->replot();
 }
+
+
 
 void correctInput::on_pushButton_clicked()
 {
@@ -227,3 +258,43 @@ void correctInput::on_pushButton_clicked()
     accept();
 }
 
+
+void correctInput::on_autoAdjustmen_clicked()
+{
+
+    ui->sinPosGorizont->hide();
+    ui->autoAdjustmen->hide();
+    ui->progressBar->show();
+    ui->progressBar->setValue(0);
+
+
+    ui->progressBar->hide();
+}
+
+void correctInput::addProgrssBar()
+{
+    ui->progressBar->setValue(ui->progressBar->value()+1);
+}
+
+void autoAdjuystment::process()
+{
+    unsigned long long minDistance = LLONG_MAX;
+    unsigned long long currentDistance;
+    double phaseShift;
+
+    for (double i = -M_PI; i <= M_PI; i+=0.01)
+    {
+        m_owner->transformSinToRealData(i);
+        currentDistance = m_owner->errorMetrick();
+        if (minDistance > currentDistance)
+        {
+            minDistance = currentDistance;
+            phaseShift = i;
+        }
+        emit tick();
+    }
+
+    m_owner->transformSinToRealData(phaseShift);
+    emit reloadGraph();
+
+}

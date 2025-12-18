@@ -538,7 +538,7 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
         doc.write(2,1,"Диаметр");
         doc.write(2,2, QString::number(data->steps[0].m_d0) + " мм.");
         doc.write(3,1,"Амплитуда");
-        doc.write(3,2, QString::number(data->ampl/2) + " кПа.");
+        doc.write(3,2, QString::number(data->ampl) + " кПа.");
         doc.write(4,1,"Частота");
         doc.write(4,2, QString::number(data->frequency) + " Гц");
         doc.write(5,1,"Количество циклов");
@@ -572,10 +572,7 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
             YData.append(el.epsilon_ * 100); //Потому что в графике проценты
         }
         XData = convertToN(data);
-        // savePlotAsSvg(insertGraph("График зависимости осевой деформации","Число циклов нагружения N","Осевая деформация ε, %",XData, YData),reportDir + "/График зависимости осевой деформации.svg");
-        // doc.write(1,5,"=HYPERLINK(\"График зависимости осевой деформации.svg\", \"График зависимости осевой деформации\")");
-        // addGraphInDocuments(&doc,"График зависимости осевой деформации","X","Y",XData, YData);
-        doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деформации","Число циклов нагружения N","Осевая деформация ε, %",XData, YData));
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деформации от числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",XData, YData));
         positionImg = positionImg + height / 20 + 4;
         XData.clear();
         YData.clear();
@@ -586,7 +583,7 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
             ZData.append(el.PPR);
         }
         XData = convertToN(data);
-        doc.insertImage(positionImg,5,*insertGraph("График зависимоисти осевой деф. и относ. порового давления от числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деф. и относ. порового давления от числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",
                                                      "Отностительное поровое давление PPR",XData, YData, ZData));
         positionImg = positionImg + height / 20 + 4;
         XData.clear();
@@ -596,12 +593,10 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
 
         for (const stepVibro &el : data->steps)
         {
-            YData.append(el.PPR * 100); //Потому что в графике проценты
+            YData.append(el.PPR * 100);
         }
         XData = convertToN(data);
-        //savePlotAsSvg(insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData),reportDir + "/График зависимости относительного порового давления от числа циклов динамического нагружения.svg");
-        //doc.write(2,5,"=HYPERLINK(\"График зависимости относительного порового давления от числа циклов динамического нагружения.svg\", \"График зависимости относительного порового давления от числа циклов динамического нагружения\")");
-        doc.insertImage(positionImg,5,*insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData));
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости относительного порового давления \nот числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData));
         positionImg = positionImg + height / 20 + 4;
         XData.clear();
         YData.clear();
@@ -612,9 +607,7 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
             YData.append(el.q);
             XData.append(el.p_);
         }
-        //savePlotAsSvg(insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData),reportDir + "/График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg");
-        //doc.write(3,5,"=HYPERLINK(\"График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg\", \"График зависимости максимальных касательных напряжений от средних эффективных напряжений\")");
-        doc.insertImage(positionImg,5,*insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData));
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости максимальных касательных напряжений \nот средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData));
         positionImg = positionImg + height / 20 + 4;
         XData.clear();
         YData.clear();
@@ -625,8 +618,6 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
             YData.append(el.m_verticalPressure_kPa);
         }
         XData = convertToN(data);
-        //savePlotAsSvg(insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData),reportDir + "/График зависимости напряжения от времени.svg");
-        //doc.write(4,5,"=HYPERLINK(\"График зависимости напряжения от времени.svg\", \"График зависимости напряжения от времени\")");
         doc.insertImage(positionImg,5,*insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
         positionImg = positionImg + height / 20 + 4;
         XData.clear();
@@ -635,8 +626,6 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
         double w = getW(&XData,&YData,data);
         doc.write(9,1,"ΔW");
         doc.write(9,2,QString::number(w,'f',6) + " кПа.");
-        //savePlotAsSvg(insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData),reportDir + "/График Σ–Ε.svg");
-        //doc.write(5,5,"=HYPERLINK(\"График Σ–Ε.svg\", \"График Σ–Ε\")");
         doc.insertImage(positionImg,5, *insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
         positionImg = positionImg + height / 20 + 4;
 
@@ -650,8 +639,6 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
 
 
         double moduleDeform;
-        //savePlotAsSvg(getModulsDeforms(data, &moduleDeform, true),reportDir + "/Eyd.svg");
-        // doc.write(7,5,"=HYPERLINK(\"Eyd.svg\", \"Eyd.svg\")");
         doc.insertImage(positionImg,5, *getModulsDeforms(data, &moduleDeform, true));
         positionImg = positionImg + height / 20 + 4;
 
@@ -661,8 +648,6 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
         doc.write(7,1,r);
         doc.write(7,2,QString::number(moduleDeform) + " МПа.");
 
-        //savePlotAsSvg(getModulsDeforms(data, &moduleDeform, false),reportDir + "/Ed.svg");
-        //doc.write(8,5,"=HYPERLINK(\"Ed.svg\", \"Ed\")");
         doc.insertImage(positionImg,5, *getModulsDeforms(data, &moduleDeform, false));
         positionImg = positionImg + height / 20 + 4;
         r = QXlsx::RichString();
@@ -716,7 +701,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     doc.write(2,1,"Диаметр");
     doc.write(2,2, QString::number(data->steps[0].m_d0) + " мм.");
     doc.write(3,1,"Амплитуда");
-    doc.write(3,2, QString::number(data->ampl/2) + " кПа.");
+    doc.write(3,2, QString::number(data->ampl) + " кПа.");
     doc.write(4,1,"Частота");
     doc.write(4,2, QString::number(data->frequency) + " Гц");
     doc.write(5,1,"Количество циклов");
@@ -748,10 +733,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
             YData.append(el.epsilon_ * 100); //Потому что в графике проценты
     }
     XData = convertToN(data);
-    //savePlotAsSvg(insertGraph("График зависимости осевой деформации","Число циклов нагружения N","Осевая деформация ε, %",XData, YData),
-    //              reportDir + "/График зависимости осевой деформации.svg");
-    //doc.write(1,5,"=HYPERLINK(\"График зависимости осевой деформации.svg\", \"График зависимости осевой деформации\")");
-    doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деформации","Число циклов нагружения N","Осевая деформация ε, %",XData, YData));
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деформации осевой деформации от числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",XData, YData));
     positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();
@@ -762,7 +744,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
         ZData.append(el.PPR);
     }
     XData = convertToN(data);
-    doc.insertImage(positionImg,5,*insertGraph("График зависимоисти осевой деф. и относ. порового давления от числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деф. и относ. порового давления от числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",
                                                  "Отностительное поровое давление PPR",XData, YData, ZData));
     positionImg = positionImg + height / 20 + 4;
     XData.clear();
@@ -775,9 +757,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
             YData.append(el.PPR * 100); //Потому что в графике проценты
     }
     XData = convertToN(data);
-    //savePlotAsSvg(insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData),reportDir + "/График зависимости относительного порового давления от числа циклов динамического нагружения.svg");
-    //doc.write(2,5,"=HYPERLINK(\"График зависимости относительного порового давления от числа циклов динамического нагружения.svg\", \"График зависимости относительного порового давления от числа циклов динамического нагружения\")");
-    doc.insertImage(positionImg,5,*insertGraph("График зависимости относительного порового давления от числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData));
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости относительного порового давления \nот числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData));
     positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();
@@ -787,9 +767,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
             YData.append(el.q);
             XData.append(el.p_);
     }
-    //savePlotAsSvg(insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData),reportDir + "/График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg");
-    //doc.write(3,5,"=HYPERLINK(\"График зависимости максимальных касательных напряжений от средних эффективных напряжений.svg\", \"График зависимости максимальных касательных напряжений от средних эффективных напряжений\")");
-    doc.insertImage(positionImg,5,*insertGraph("График зависимости максимальных касательных напряжений от средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData));
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости максимальных касательных напряжений \nот средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData));
     positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();
@@ -800,8 +778,6 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
         YData.append(el.m_verticalPressure_kPa);
     }
     XData = convertToN(data);
-    //savePlotAsSvg(insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData),reportDir + "/График зависимости напряжения от времени.svg");
-    //doc.write(4,5,"=HYPERLINK(\"График зависимости напряжения от времени.svg\", \"График зависимости напряжения от времени\")");
     doc.insertImage(positionImg,5,*insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
     positionImg = positionImg + height / 20 + 4;
     XData.clear();
@@ -810,14 +786,10 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     double w = getW(&XData,&YData,data);
     doc.write(9,1,"ΔW");
     doc.write(9,2,QString::number(w,'f',6) + " кПа.");
-    //savePlotAsSvg(insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData),reportDir + "/График Σ–Ε.svg");
-    //doc.write(5,5,"=HYPERLINK(\"График Σ–Ε.svg\", \"График Σ–Ε\")");
     doc.insertImage(positionImg,5, *insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
     positionImg = positionImg + height / 20 + 4;
 
     getXYDataEpsD(&XData,&YData,data);
-    //savePlotAsSvg(insertGraph("ε = f(lnt)","Время, ln(мин.)","Осевая деформация ε, %",XData, YData,&a,&b),reportDir + "/ε = f(lnt).svg");
-    //doc.write(6,5,"=HYPERLINK(\"ε = f(lnt).svg\", \"ε = f(lnt)\")");
     doc.insertImage(positionImg,5,*insertGraph("ε = f(lnt)","Время, ln(мин.)","Осевая деформация ε, %",XData, YData,&a,&b));
     positionImg = positionImg + height / 20 + 4;
     doc.write(10,1,"a");
@@ -841,8 +813,6 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
 
     double moduleDeform;
 
-    //savePlotAsSvg(getModulsDeforms(data, &moduleDeform, true),reportDir + "/Eyd.svg");
-    //doc.write(7,5,"=HYPERLINK(\"Eyd.svg\", \"Eyd.svg\")");
     doc.insertImage(positionImg,5, *getModulsDeforms(data, &moduleDeform, true));
     positionImg = positionImg + height / 20 + 4;
     r.addFragment("E", normal);
@@ -852,8 +822,6 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     doc.write(7,2,QString::number(moduleDeform) + " МПа.");
 
 
-    //savePlotAsSvg(getModulsDeforms(data, &moduleDeform, false),reportDir + "/Ed.svg");
-    //doc.write(8,5,"=HYPERLINK(\"Ed.svg\", \"Ed\")");
     doc.insertImage(positionImg,5, *getModulsDeforms(data, &moduleDeform, false));
     positionImg = positionImg + height / 20 + 4;
     r = QXlsx::RichString();

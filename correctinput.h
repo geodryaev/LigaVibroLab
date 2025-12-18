@@ -30,6 +30,9 @@ public:
     explicit correctInput(vibroData * data, const double max, const double min, const double freq, QWidget *parent = nullptr);
     ~correctInput();
 
+    unsigned long long errorMetrick();
+    void transformSinToRealData(double a);
+
 private:
     double min;
     double max;
@@ -45,12 +48,36 @@ private:
     QwtPlotPicker * picker;
     vibroData * data;
     QwtPlotCurve * sineCurv;
+    QVector<QPointF> pointsTemplatesGraph;
+
+
+
+
 private slots:
     void addSineStencil(bool checked);
     void changeValueHorisontal(int value);
-private slots:
     void onPointClick(const QPointF &point);
     void on_pushButton_clicked();
+    void on_autoAdjustmen_clicked();
+    void addProgrssBar();
+};
+
+
+class autoAdjuystment : public QObject {
+    Q_OBJECT
+public:
+    explicit autoAdjuystment(correctInput * owner):
+        m_owner(owner){}
+
+private:
+    correctInput * m_owner;
+
+public slots:
+    void process();
+
+signals:
+    void tick();
+    void reloadGraph();
 };
 
 #endif // CORRECTINPUT_H

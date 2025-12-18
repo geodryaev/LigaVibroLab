@@ -53,6 +53,13 @@
       </spacer>
      </item>
      <item>
+      <widget class="QPushButton" name="autoAdjustmen">
+       <property name="text">
+        <string>Автоматическая подстройка</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QSlider" name="sinPosGorizont">
        <property name="tracking">
         <bool>true</bool>
@@ -70,7 +77,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QDoubleSpinBox" name="min"/>
+      <widget class="QDoubleSpinBox" name="min">
+       <property name="maximum">
+        <double>2000.000000000000000</double>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QLabel" name="label_5">
@@ -80,7 +91,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QDoubleSpinBox" name="max"/>
+      <widget class="QDoubleSpinBox" name="max">
+       <property name="maximum">
+        <double>2000.000000000000000</double>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QLabel" name="label_6">
@@ -126,6 +141,39 @@
         <string>В случаи, если данная операция не требуется, нажмите ОК</string>
        </property>
       </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QProgressBar" name="progressBar">
+       <property name="value">
+        <number>24</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
      </item>
      <item>
       <widget class="QPushButton" name="pushButton">
