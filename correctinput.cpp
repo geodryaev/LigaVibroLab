@@ -1,14 +1,11 @@
 #include <ui_correctinput.h>
 #include <QPen>
-
+#include <QThread>
 #include "stepvibro.h"
 #include "correctinput.h"
 
 correctInput::correctInput(vibroData * data, const double max, const double min, const double freq, QWidget *parent)
     : QDialog(parent),
-    max(max),
-    min(min),
-    freq(freq),
     data(data),
     ui(new Ui::correctInput)
 {
@@ -25,71 +22,39 @@ correctInput::correctInput(vibroData * data, const double max, const double min,
     ui->progressBar->setMaximum(static_cast<int>(M_PI * 2 * 100));
     ui->progressBar->hide();
 
-    connect(ui->cheack,&QRadioButton::toggled,this,&correctInput::addSineStencil);
-    connect(ui->sinPosGorizont,&QSlider::valueChanged, this, &correctInput::changeValueHorisontal);
+    worker = new autoAdjustment();
+    plot = new QwtPlot(this);
+    sineCurv = new QwtPlotCurve("");
+    sineCurv->setPen(QPen(Qt::blue,3));
 
-    sineCurv = new QwtPlotCurve();
-    sineCurv->setPen(QPen(Qt::blue, 4, Qt::DashLine));
-    QVector<double>XData;
-    QVector<double>YData;
+    picker = new QwtPlotPicker(plot->canvas());
 
-    for (const stepVibro &el : std::as_const(data->steps))
-    {
-        YData.append(el.m_verticalPressure_kPa);
-        XData.append(el.m_time);
-    }
+    connect(this,&correctInput::getMainGraph,worker,&autoAdjustment::getMainGraph);
+    connect(picker, qOverload<const QPointF &>(&QwtPlotPicker::selected),this, &correctInput::onPointClick);
+    connect(this,&correctInput::getDataForStencil,worker,&autoAdjustment::getDataForStencil);
+    connect(ui->cheack,&QRadioButton::clicked,this,&correctInput::addSineStencil);
+    connect(worker,&autoAdjustment::complateSinTemplates,this,&correctInput::reloadSinTemplates);
+    connect(worker,&autoAdjustment::complateMainGraph,this,&correctInput::paintMainGraph);
+    connect(ui->autoAdjustmen,&QPushButton::clicked,&autoAdjustment::process);
 
-        plot = new QwtPlot(this);
-        double minValX = *std::min_element(XData.begin(), XData.end());
-        double maxValX = *std::max_element(XData.begin(), XData.end());
-        minX= minValX;
-        maxX= maxValX;
+    plot->setTitle("График нагрузки");
+    plot->setCanvasBackground(Qt::white);
+    plot->setAxisTitle(QwtPlot::xBottom, "Время, мин.");
+    plot->setAxisTitle(QwtPlot::yLeft, "Усилие, кПа.");
 
-        double minValY = *std::min_element(YData.begin(), YData.end());
-        double maxValY = *std::max_element(YData.begin(), YData.end());
-        plot->setTitle("График нагрузки");
-        plot->setCanvasBackground(Qt::white);
-        plot->setAxisTitle(QwtPlot::xBottom, "Время, мин.");
-        plot->setAxisTitle(QwtPlot::yLeft, "Усилие, кПа.");
-        plot->setAxisScale(QwtPlot::xBottom, minValX, maxValX);
-        plot->setAxisScale(QwtPlot::yLeft, minValY, maxValY);
 
-        QwtPlotCurve *curv = new QwtPlotCurve("");
-        curv->setSamples(XData, YData);
-        curv->setPen(QPen(Qt::red,3));
-        curv->attach(plot);
 
-        QwtPlotGrid *grid = new QwtPlotGrid();
-        grid->setMajorPen(QPen(Qt::lightGray, 1, Qt::DashLine));
-        grid->setMinorPen(QPen(Qt::gray, 1, Qt::DotLine));
-        grid->attach(plot);
+    picker->setStateMachine(new QwtPickerClickPointMachine());
+    picker->setMousePattern(QwtEventPattern::MouseSelect1, Qt::RightButton);
+    picker->setTrackerMode(QwtPicker::AlwaysOn);
+    picker->setRubberBand(QwtPicker::CrossRubberBand);
+    picker->setEnabled(true);
 
-        QwtPlotZoomer * zoom = new QwtPlotZoomer(plot->canvas());
-        zoom->setRubberBand(QwtPicker::RectRubberBand);
-        zoom->setRubberBandPen(QColor(Qt::blue));
-        zoom->setTrackerMode(QwtPicker::AlwaysOn);
-        zoom->setTrackerPen(QColor(Qt::black));
-        zoom->setMousePattern(QwtEventPattern::MouseSelect2, Qt::RightButton, Qt::ControlModifier);
+    picker->setTrackerPen(QPen(Qt::black));
 
-        picker = new QwtPlotPicker(plot->canvas());
-        picker->setStateMachine(new QwtPickerClickPointMachine());
-        picker->setMousePattern(QwtEventPattern::MouseSelect1, Qt::RightButton);
-        picker->setTrackerMode(QwtPicker::AlwaysOn);
-        picker->setRubberBand(QwtPicker::CrossRubberBand);
-        picker->setEnabled(true);
+    emit getMainGraph(*data,&minValX,&maxValX,&minValY,&maxValY);
 
-        picker->setTrackerPen(QPen(Qt::black));
 
-        connect(picker, SIGNAL(selected(QPointF)), this, SLOT(onPointClick(QPointF)));
-
-        plot->resize(800,600);
-        plot->replot();
-        if (!ui->widget->layout()) {
-            QVBoxLayout *layout = new QVBoxLayout(ui->widget);
-            layout->addWidget(plot);
-        } else {
-            ui->widget->layout()->addWidget(plot);
-        }
 
 }
 
@@ -98,35 +63,12 @@ correctInput::~correctInput()
     delete ui;
 }
 
-unsigned long long correctInput::errorMetrick()
-{
-    unsigned long long distance = 0;
-    qDebug() << "Real\t--\tVirtual";
-    for (int i = 0; i < data->steps.size(); i++)
-    {
-        distance += std::abs(data->steps[i].m_verticalPressure_kPa - pointsTemplatesGraph[i].y());
-        //qDebug() << data->steps[i].m_time << "\t--\t" << pointsTemplatesGraph[i].x();
-    }
-    return distance;
-}
-
-void correctInput::transformSinToRealData(double a)
-{
-    double ampl = (max-min)/2;
-    double yOffset = min + ampl;
-
-    pointsTemplatesGraph.clear();
-    for(auto  it : data->steps)
-    {
-        pointsTemplatesGraph.append(QPointF(it.m_time, ampl * std::sin(2 * M_PI * ui->freq->value() * it.m_time * 60 + a) + yOffset));
-    }
-}
-
 void correctInput::addSineStencil(bool checked)
 {
-    min = ui->min->value();
-    max = ui->max->value();
-    freq = ui->freq->value();
+    double min = ui->min->value();
+    double max = ui->max->value();
+    double freq = ui->freq->value();
+    pointsTemplatesGraph = {};
 
     if (checked)
     {
@@ -138,22 +80,8 @@ void correctInput::addSineStencil(bool checked)
         ui->label_4->hide();
         ui->label_5->hide();
         ui->label_6->hide();
-
-        pointsTemplatesGraph.clear();
-        double ampl = (max-min)/2;
-        double yOffset = min + ampl;
-        double dt = 0.0001;
-        double y;
-
-
-        for (double x = minX; x < maxX; x+=dt)
-        {
-            y = ampl * std::sin(2 * M_PI * ui->freq->value() * x * 60 + phi) + yOffset;
-            pointsTemplatesGraph.append(QPointF(x,y));
-        }
-        sineCurv->setSamples(pointsTemplatesGraph);
         sineCurv->attach(plot);
-        plot->replot();
+        emit getDataForStencil(&pointsTemplatesGraph,min,max,freq, phi);
     }
     else
     {
@@ -199,7 +127,7 @@ void correctInput::onPointClick(const QPointF &point)
         selectPoint.clear();
         selectPoint.append(point);
         qDebug() << "Сброс. Новая точка:" << point;
-        for (QwtPlotMarker* m : selectedMarkers) {
+        for (QwtPlotMarker* &m : selectedMarkers) {
             m->detach();   // убрать с графика
             delete m;      // освободить память
         }
@@ -218,7 +146,40 @@ void correctInput::onPointClick(const QPointF &point)
     plot->replot();
 }
 
+void correctInput::paintMainGraph(QVector<QPointF> points)
+{
+    QwtPlotCurve *curv = new QwtPlotCurve("");
+    QwtPlotGrid *grid = new QwtPlotGrid();
 
+    plot->setAxisScale(QwtPlot::xBottom, minValX, maxValX);
+    plot->setAxisScale(QwtPlot::yLeft, minValY, maxValY);
+    curv->setSamples(points);
+    curv->setPen(QPen(Qt::red,3));
+    curv->attach(plot);
+
+    grid->setMajorPen(QPen(Qt::lightGray, 1, Qt::DashLine));
+    grid->setMinorPen(QPen(Qt::gray, 1, Qt::DotLine));
+    grid->attach(plot);
+    QwtPlotZoomer * zoom = new QwtPlotZoomer(plot->canvas());
+    zoom->setRubberBand(QwtPicker::RectRubberBand);
+    zoom->setRubberBandPen(QColor(Qt::blue));
+    zoom->setTrackerMode(QwtPicker::AlwaysOn);
+    zoom->setTrackerPen(QColor(Qt::black));
+    zoom->setMousePattern(QwtEventPattern::MouseSelect3,Qt::MiddleButton);
+    zoom->setMousePattern(QwtEventPattern::MouseSelect2,
+                          Qt::RightButton,
+                          Qt::ControlModifier);
+
+    plot->resize(800,600);
+    plot->replot();
+    if (!ui->widget->layout()) {
+        QVBoxLayout *layout = new QVBoxLayout(ui->widget);
+        layout->addWidget(plot);
+    } else {
+        ui->widget->layout()->addWidget(plot);
+    }
+    zoom->setZoomBase();
+}
 
 void correctInput::on_pushButton_clicked()
 {
@@ -258,15 +219,24 @@ void correctInput::on_pushButton_clicked()
     accept();
 }
 
-
 void correctInput::on_autoAdjustmen_clicked()
 {
+    // QThread *thread = new QThread ();
+    // autoAdjustment * worker = new autoAdjuystment(this);
+    // worker->moveToThread(thread);
+
 
     ui->sinPosGorizont->hide();
     ui->autoAdjustmen->hide();
     ui->progressBar->show();
     ui->progressBar->setValue(0);
 
+    // connect(thread, &QThread::started,worker, &autoAdjustment::process);
+    // connect(worker, &autoAdjuystment::finish,thread,&QThread::quit);
+    // connect(worker, &autoAdjuystment::tick,this,&correctInput::addProgrssBar);
+    // connect(worker, &autoAdjuystment::reloadGraph,this,&correctInput::graphReload);
+
+    // thread->start();
 
     ui->progressBar->hide();
 }
@@ -276,7 +246,68 @@ void correctInput::addProgrssBar()
     ui->progressBar->setValue(ui->progressBar->value()+1);
 }
 
-void autoAdjuystment::process()
+void correctInput::graphReload(const QVector<QPointF> & curvData)
+{
+
+    sineCurv->setSamples(curvData);
+    plot->replot();
+}
+
+void correctInput::reloadSinTemplates()
+{
+    sineCurv->setSamples(pointsTemplatesGraph);
+    plot->replot();
+}
+
+void correctInput::getDataMainGraph(QVector<QPointF> points)
+{
+    double minValX;
+    double maxValX;
+    double minValY;
+    double maxValY;
+}
+
+void autoAdjustment::getMainGraph(vibroData &data,double * minX, double * maxX, double * minY, double * maxY)
+{
+    QVector<double>XData;
+    QVector<double>YData;
+    QVector<QPointF> points;
+
+    for (const stepVibro &el : std::as_const(data.steps))
+    {
+        points.append(QPointF(el.m_time, el.m_verticalPressure_kPa));
+        YData.append(el.m_verticalPressure_kPa);
+        XData.append(el.m_time);
+    }
+    *minX = *std::min_element(XData.begin(), XData.end());
+    *maxX = *std::max_element(XData.begin(), XData.end());
+    *minY = *std::min_element(YData.begin(), YData.end());
+    *maxY = *std::max_element(YData.begin(), YData.end());
+    m_minX= *minX;
+    m_maxX= *maxX;
+
+    emit complateMainGraph(points);
+
+}
+
+void autoAdjustment::getDataForStencil(QVector<QPointF> *curvData, double minPress, double maxPress, double frequency, double phi)
+{
+    curvData->clear();
+    double ampl = (maxPress-minPress)/2;
+    double yOffset = minPress + ampl;
+    double dt = 0.0001;
+    double y;
+
+    for (double x = m_minX; x < m_maxX; x+=dt)
+    {
+        y = ampl * std::sin(2 * M_PI * frequency * x * 60 + phi) + yOffset;
+        //pointsTemplatesGraph.append();
+        curvData->append(QPointF(x,y));
+    }
+    emit complateSinTemplates();
+}
+
+void autoAdjustment::process(QVector<QPointF> * d,double min, double max,double freq, double phi)
 {
     unsigned long long minDistance = LLONG_MAX;
     unsigned long long currentDistance;
@@ -284,17 +315,42 @@ void autoAdjuystment::process()
 
     for (double i = -M_PI; i <= M_PI; i+=0.01)
     {
-        m_owner->transformSinToRealData(i);
-        currentDistance = m_owner->errorMetrick();
+        transformSinToRealData(i);
+        currentDistance = errorMetrick();
         if (minDistance > currentDistance)
         {
             minDistance = currentDistance;
             phaseShift = i;
         }
-        emit tick();
+        // emit tick();
     }
 
-    m_owner->transformSinToRealData(phaseShift);
-    emit reloadGraph();
+    transformSinToRealData(phaseShift);
+    // emit reloadGraph();
 
+}
+
+unsigned long long autoAdjustment::errorMetrick()
+{
+    unsigned long long distance = 0;
+    // qDebug() << "Real\t--\tVirtual";
+    for (int i = 0; i < data->steps.size(); i++)
+    {
+        distance += std::abs(data->steps[i].m_verticalPressure_kPa - pointsTemplatesGraph[i].y());
+        //qDebug() << data->steps[i].m_time << "\t--\t" << pointsTemplatesGraph[i].x();
+    }
+    return distance;
+}
+
+//Вот тут поменять надо на нормально и все, так же сделать тут проход
+void autoAdjustment::transformSinToRealData(double a)
+{
+    double ampl = (max-min)/2;
+    double yOffset = min + ampl;
+
+    pointsTemplatesGraph.clear();
+    for(auto  it : data->steps)
+    {
+        //pointsTemplatesGraph.append(QPointF(it.m_time, ampl * std::sin(2 * M_PI * ui->freq->value() * it.m_time * 60 + a) + yOffset));
+    }
 }

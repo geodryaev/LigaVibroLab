@@ -96,8 +96,6 @@ void MainWindow::on_calculateVibro_clicked()
 
 }
 
-
-
 void MainWindow::smooth_graph()
 {
 
