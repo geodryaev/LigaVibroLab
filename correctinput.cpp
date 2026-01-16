@@ -1,12 +1,13 @@
 #include <ui_correctinput.h>
 #include <QPen>
 #include <QThread>
+#include <QTimer>
 #include "stepvibro.h"
 #include "correctinput.h"
 
-correctInput::correctInput(vibroData * data, const double max, const double min, const double freq, QWidget *parent)
+correctInput::correctInput(vibroData * _data, const double max, const double min, const double freq, QWidget *parent)
     : QDialog(parent),
-    data(data),
+    data(_data),
     ui(new Ui::correctInput)
 {
     ui->setupUi(this);
@@ -22,20 +23,39 @@ correctInput::correctInput(vibroData * data, const double max, const double min,
     ui->progressBar->setMaximum(static_cast<int>(M_PI * 2 * 100));
     ui->progressBar->hide();
 
-    worker = new autoAdjustment();
     plot = new QwtPlot(this);
     sineCurv = new QwtPlotCurve("");
     sineCurv->setPen(QPen(Qt::blue,3));
 
     picker = new QwtPlotPicker(plot->canvas());
 
-    connect(this,&correctInput::getMainGraph,worker,&autoAdjustment::getMainGraph);
+
+    worker = new autoAdjustment(data);
+    thread = new QThread (this);
+    worker->moveToThread(thread);
+
+    connect(this,&correctInput::getMainGraph,worker,&autoAdjustment::getMainGraph, Qt::QueuedConnection );
+    connect(this,&correctInput::test,worker, &autoAdjustment::test, Qt::QueuedConnection);
     connect(picker, qOverload<const QPointF &>(&QwtPlotPicker::selected),this, &correctInput::onPointClick);
     connect(this,&correctInput::getDataForStencil,worker,&autoAdjustment::getDataForStencil);
     connect(ui->cheack,&QRadioButton::clicked,this,&correctInput::addSineStencil);
     connect(worker,&autoAdjustment::complateSinTemplates,this,&correctInput::reloadSinTemplates);
     connect(worker,&autoAdjustment::complateMainGraph,this,&correctInput::paintMainGraph);
-    connect(ui->autoAdjustmen,&QPushButton::clicked,&autoAdjustment::process);
+    connect(ui->autoAdjustmen, &QPushButton::clicked,this, &correctInput::sendProcess);
+    connect(this,&correctInput::sendProcessSignals, worker,&autoAdjustment::process);
+    connect(worker, &autoAdjustment::tick, this, &correctInput::paintTemplateGraph);
+    connect(thread, &QThread::started, this, [this](){
+        qDebug() << "thread started, emitting test";
+        emit test();
+    });
+    thread->start();
+
+
+    connect(thread, &QThread::started, [](){
+
+        qDebug() << Q_FUNC_INFO;
+    });
+
 
     plot->setTitle("График нагрузки");
     plot->setCanvasBackground(Qt::white);
@@ -52,7 +72,7 @@ correctInput::correctInput(vibroData * data, const double max, const double min,
 
     picker->setTrackerPen(QPen(Qt::black));
 
-    emit getMainGraph(*data,&minValX,&maxValX,&minValY,&maxValY);
+    emit getMainGraph(&minValX,&maxValX,&minValY,&maxValY);
 
 
 
@@ -60,14 +80,24 @@ correctInput::correctInput(vibroData * data, const double max, const double min,
 
 correctInput::~correctInput()
 {
+    thread->requestInterruption();
+    thread->quit();
+    thread->wait();
     delete ui;
+}
+
+void correctInput::sendProcess(bool ev)
+{
+    emit sendProcessSignals(&pointsMainGraph, &pointsTemplatesGraph,maxSinTemp,minSinTemp,freqSinTemp);
+    //ui->autoAdjustmen->hide();
+    ui->sinPosGorizont->hide();
 }
 
 void correctInput::addSineStencil(bool checked)
 {
-    double min = ui->min->value();
-    double max = ui->max->value();
-    double freq = ui->freq->value();
+    minSinTemp  = ui->min->value();
+    maxSinTemp = ui->max->value();
+    freqSinTemp = ui->freq->value();
     pointsTemplatesGraph = {};
 
     if (checked)
@@ -81,7 +111,7 @@ void correctInput::addSineStencil(bool checked)
         ui->label_5->hide();
         ui->label_6->hide();
         sineCurv->attach(plot);
-        emit getDataForStencil(&pointsTemplatesGraph,min,max,freq, phi);
+        emit getDataForStencil(&pointsTemplatesGraph,minSinTemp,maxSinTemp,freqSinTemp, phi);
     }
     else
     {
@@ -146,14 +176,15 @@ void correctInput::onPointClick(const QPointF &point)
     plot->replot();
 }
 
-void correctInput::paintMainGraph(QVector<QPointF> points)
+void correctInput::paintMainGraph(QVector<QPointF> * points)
 {
+    pointsMainGraph = *points;
     QwtPlotCurve *curv = new QwtPlotCurve("");
     QwtPlotGrid *grid = new QwtPlotGrid();
 
     plot->setAxisScale(QwtPlot::xBottom, minValX, maxValX);
     plot->setAxisScale(QwtPlot::yLeft, minValY, maxValY);
-    curv->setSamples(points);
+    curv->setSamples(*points);
     curv->setPen(QPen(Qt::red,3));
     curv->attach(plot);
 
@@ -181,64 +212,10 @@ void correctInput::paintMainGraph(QVector<QPointF> points)
     zoom->setZoomBase();
 }
 
-void correctInput::on_pushButton_clicked()
+void correctInput::paintTemplateGraph()
 {
-    if (selectedMarkers.size() != 2 and selectedMarkers.size() != 0)
-    {
-        this->close();
-        return;
-    }
-
-    if (selectedMarkers.size() != 0)
-    {
-        qreal startTime = std::min(selectedMarkers[0]->value().x(), selectedMarkers[1]->value().x());
-        qreal stopTime  = std::max(selectedMarkers[0]->value().x(), selectedMarkers[1]->value().x());
-
-        int startIndex = -1;
-        int endIndex = -1;
-
-        for (int i = 0; i < data->steps.size(); ++i)
-        {
-            if (qAbs(data->steps[i].m_time - startTime) < 0.002f)
-                startIndex = i;
-            if (qAbs(data->steps[i].m_time - stopTime) < 0.002f)
-                endIndex = i;
-        }
-
-        if (startIndex == -1 || endIndex == -1 || startIndex >= endIndex)
-        {
-            qWarning() << "Не удалось найти границы отрезка!";
-            this->close();
-            return;
-        }
-
-
-        data->steps.erase(data->steps.begin(), data->steps.begin() + startIndex);
-        data->steps.erase(data->steps.begin() + (endIndex - startIndex + 1), data->steps.end());
-    }
-    accept();
-}
-
-void correctInput::on_autoAdjustmen_clicked()
-{
-    // QThread *thread = new QThread ();
-    // autoAdjustment * worker = new autoAdjuystment(this);
-    // worker->moveToThread(thread);
-
-
-    ui->sinPosGorizont->hide();
-    ui->autoAdjustmen->hide();
-    ui->progressBar->show();
-    ui->progressBar->setValue(0);
-
-    // connect(thread, &QThread::started,worker, &autoAdjustment::process);
-    // connect(worker, &autoAdjuystment::finish,thread,&QThread::quit);
-    // connect(worker, &autoAdjuystment::tick,this,&correctInput::addProgrssBar);
-    // connect(worker, &autoAdjuystment::reloadGraph,this,&correctInput::graphReload);
-
-    // thread->start();
-
-    ui->progressBar->hide();
+    sineCurv->setSamples(pointsTemplatesGraph);
+    plot->replot();
 }
 
 void correctInput::addProgrssBar()
@@ -267,15 +244,15 @@ void correctInput::getDataMainGraph(QVector<QPointF> points)
     double maxValY;
 }
 
-void autoAdjustment::getMainGraph(vibroData &data,double * minX, double * maxX, double * minY, double * maxY)
+void autoAdjustment::getMainGraph(double *minX, double * maxX, double * minY, double * maxY)
 {
     QVector<double>XData;
     QVector<double>YData;
-    QVector<QPointF> points;
+    QVector<QPointF> * points = new QVector<QPointF>();
 
-    for (const stepVibro &el : std::as_const(data.steps))
+    for (const stepVibro &el : std::as_const(data->steps))
     {
-        points.append(QPointF(el.m_time, el.m_verticalPressure_kPa));
+        points->append(QPointF(el.m_time, el.m_verticalPressure_kPa));
         YData.append(el.m_verticalPressure_kPa);
         XData.append(el.m_time);
     }
@@ -298,6 +275,7 @@ void autoAdjustment::getDataForStencil(QVector<QPointF> *curvData, double minPre
     double dt = 0.0001;
     double y;
 
+
     for (double x = m_minX; x < m_maxX; x+=dt)
     {
         y = ampl * std::sin(2 * M_PI * frequency * x * 60 + phi) + yOffset;
@@ -307,37 +285,49 @@ void autoAdjustment::getDataForStencil(QVector<QPointF> *curvData, double minPre
     emit complateSinTemplates();
 }
 
-void autoAdjustment::process(QVector<QPointF> * d,double min, double max,double freq, double phi)
+void autoAdjustment::test()
 {
+    qDebug() << "\n------\n" << "autoAdjustment::test"
+             << " current=" << QThread::currentThread()
+             << " object="  << this->thread()
+             << " gui="     << qApp->thread() << "\n------\n";
+}
+
+void autoAdjustment::process(QVector<QPointF> * d, QVector<QPointF> * sinTemplate, double min, double max,double freq)
+{
+    this->max = max;
+    this->min = min;
+    this->freq = freq;
+    p_pointsTemplatesGraph = *sinTemplate;
+    pointsMainGraph = *d;
     unsigned long long minDistance = LLONG_MAX;
     unsigned long long currentDistance;
     double phaseShift;
 
-    for (double i = -M_PI; i <= M_PI; i+=0.01)
+    for (int i = -M_PI*100; i <= M_PI*100; i++)
     {
-        transformSinToRealData(i);
+        transformSinToRealData(i/100.0);
         currentDistance = errorMetrick();
         if (minDistance > currentDistance)
         {
             minDistance = currentDistance;
-            phaseShift = i;
+            phaseShift = i/100.0;
         }
-        // emit tick();
+        *sinTemplate = std::move(p_pointsTemplatesGraph);
+        emit tick();
     }
 
     transformSinToRealData(phaseShift);
-    // emit reloadGraph();
-
+    *sinTemplate = std::move(p_pointsTemplatesGraph);
+    emit tick();
 }
 
 unsigned long long autoAdjustment::errorMetrick()
 {
     unsigned long long distance = 0;
-    // qDebug() << "Real\t--\tVirtual";
     for (int i = 0; i < data->steps.size(); i++)
     {
-        distance += std::abs(data->steps[i].m_verticalPressure_kPa - pointsTemplatesGraph[i].y());
-        //qDebug() << data->steps[i].m_time << "\t--\t" << pointsTemplatesGraph[i].x();
+        distance += std::abs(data->steps[i].m_verticalPressure_kPa - p_pointsTemplatesGraph[i].y());
     }
     return distance;
 }
@@ -348,9 +338,9 @@ void autoAdjustment::transformSinToRealData(double a)
     double ampl = (max-min)/2;
     double yOffset = min + ampl;
 
-    pointsTemplatesGraph.clear();
+    p_pointsTemplatesGraph.clear();
     for(auto  it : data->steps)
     {
-        //pointsTemplatesGraph.append(QPointF(it.m_time, ampl * std::sin(2 * M_PI * ui->freq->value() * it.m_time * 60 + a) + yOffset));
+        p_pointsTemplatesGraph.append(QPointF(it.m_time, ampl * std::sin(2 * M_PI * freq * it.m_time * 60 + a) + yOffset));
     }
 }
