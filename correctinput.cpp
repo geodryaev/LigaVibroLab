@@ -22,7 +22,7 @@ correctInput::correctInput(vibroData * _data, const double max, const double min
     ui->sinPosGorizont->setValue(0);
     ui->progressBar->setMaximum(static_cast<int>(M_PI * 2 * 100));
     ui->progressBar->hide();
-
+    ui->editMainGraph->hide();
     plot = new QwtPlot(this);
     sineCurv = new QwtPlotCurve("");
     sineCurv->setPen(QPen(Qt::blue,3));
@@ -35,7 +35,6 @@ correctInput::correctInput(vibroData * _data, const double max, const double min
     worker->moveToThread(thread);
 
     connect(this,&correctInput::getMainGraph,worker,&autoAdjustment::getMainGraph, Qt::QueuedConnection );
-    connect(this,&correctInput::test,worker, &autoAdjustment::test, Qt::QueuedConnection);
     connect(picker, qOverload<const QPointF &>(&QwtPlotPicker::selected),this, &correctInput::onPointClick);
     connect(this,&correctInput::getDataForStencil,worker,&autoAdjustment::getDataForStencil);
     connect(ui->cheack,&QRadioButton::clicked,this,&correctInput::addSineStencil);
@@ -44,10 +43,11 @@ correctInput::correctInput(vibroData * _data, const double max, const double min
     connect(ui->autoAdjustmen, &QPushButton::clicked,this, &correctInput::sendProcess);
     connect(this,&correctInput::sendProcessSignals, worker,&autoAdjustment::process);
     connect(worker, &autoAdjustment::tick, this, &correctInput::paintTemplateGraph);
-    connect(thread, &QThread::started, this, [this](){
-        qDebug() << "thread started, emitting test";
-        emit test();
+    connect(ui->editMainGraph, &QPushButton::clicked, this, [this](bool ev){
+        emit smoothMainGraph(&pointsMainGraph, &pointsTemplatesGraph);
     });
+    connect(this, &correctInput::smoothMainGraph,worker, &autoAdjustment::smoothMainGraph);
+    connect(worker,&autoAdjustment::reloadMainGraph, this, &correctInput::reloadMainGraph);
     thread->start();
 
 
@@ -74,8 +74,6 @@ correctInput::correctInput(vibroData * _data, const double max, const double min
 
     emit getMainGraph(&minValX,&maxValX,&minValY,&maxValY);
 
-
-
 }
 
 correctInput::~correctInput()
@@ -89,7 +87,8 @@ correctInput::~correctInput()
 void correctInput::sendProcess(bool ev)
 {
     emit sendProcessSignals(&pointsMainGraph, &pointsTemplatesGraph,maxSinTemp,minSinTemp,freqSinTemp);
-    //ui->autoAdjustmen->hide();
+    ui->autoAdjustmen->hide();
+    ui->editMainGraph->show();
     ui->sinPosGorizont->hide();
 }
 
@@ -179,7 +178,7 @@ void correctInput::onPointClick(const QPointF &point)
 void correctInput::paintMainGraph(QVector<QPointF> * points)
 {
     pointsMainGraph = *points;
-    QwtPlotCurve *curv = new QwtPlotCurve("");
+    curv = new QwtPlotCurve("");
     QwtPlotGrid *grid = new QwtPlotGrid();
 
     plot->setAxisScale(QwtPlot::xBottom, minValX, maxValX);
@@ -193,7 +192,7 @@ void correctInput::paintMainGraph(QVector<QPointF> * points)
     grid->attach(plot);
     QwtPlotZoomer * zoom = new QwtPlotZoomer(plot->canvas());
     zoom->setRubberBand(QwtPicker::RectRubberBand);
-    zoom->setRubberBandPen(QColor(Qt::blue));
+    zoom->setRubberBandPen (QColor(Qt::blue));
     zoom->setTrackerMode(QwtPicker::AlwaysOn);
     zoom->setTrackerPen(QColor(Qt::black));
     zoom->setMousePattern(QwtEventPattern::MouseSelect3,Qt::MiddleButton);
@@ -244,6 +243,18 @@ void correctInput::getDataMainGraph(QVector<QPointF> points)
     double maxValY;
 }
 
+void correctInput::reloadMainGraph()
+{
+    ui->editMainGraph->hide();
+    sineCurv->detach();
+    curv->setSamples(pointsMainGraph);
+    plot->replot();
+    for (int i = 0; i < pointsMainGraph.length(); i++)
+    {
+        data->steps[i].m_verticalPressure_kPa = pointsTemplatesGraph[i].y();
+    }
+}
+
 void autoAdjustment::getMainGraph(double *minX, double * maxX, double * minY, double * maxY)
 {
     QVector<double>XData;
@@ -285,12 +296,16 @@ void autoAdjustment::getDataForStencil(QVector<QPointF> *curvData, double minPre
     emit complateSinTemplates();
 }
 
-void autoAdjustment::test()
+void autoAdjustment::smoothMainGraph(QVector<QPointF> *d, QVector<QPointF> *temp)
 {
-    qDebug() << "\n------\n" << "autoAdjustment::test"
-             << " current=" << QThread::currentThread()
-             << " object="  << this->thread()
-             << " gui="     << qApp->thread() << "\n------\n";
+    double s = 1;
+    QVector<QPointF> smootGraph = *d;
+    for (int i = 0; i < temp->size(); i++)
+    {
+        smootGraph[i].setY(smootGraph[i].y() + s*((*temp)[i].y() -smootGraph[i].y()));
+    }
+    *d = std::move(smootGraph);
+    emit reloadMainGraph();
 }
 
 void autoAdjustment::process(QVector<QPointF> * d, QVector<QPointF> * sinTemplate, double min, double max,double freq)
@@ -344,3 +359,10 @@ void autoAdjustment::transformSinToRealData(double a)
         p_pointsTemplatesGraph.append(QPointF(it.m_time, ampl * std::sin(2 * M_PI * freq * it.m_time * 60 + a) + yOffset));
     }
 }
+
+void correctInput::on_pushButton_clicked()
+{
+
+    accept();
+}
+

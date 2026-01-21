@@ -53,6 +53,13 @@
       </spacer>
      </item>
      <item>
+      <widget class="QPushButton" name="editMainGraph">
+       <property name="text">
+        <string>Сгладить график</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="autoAdjustmen">
        <property name="text">
         <string>Автоматическая подстройка</string>

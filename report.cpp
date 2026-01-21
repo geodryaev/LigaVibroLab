@@ -602,6 +602,7 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
         YData.clear();
 
 
+
         for (const stepVibro &el : data->steps)
         {
             YData.append(el.q);
@@ -616,9 +617,21 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
         for (const stepVibro &el : data->steps)
         {
             YData.append(el.m_verticalPressure_kPa);
+            XData.append(el.m_time);
+        }
+        //XData = convertToN(data);
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
+        positionImg = positionImg + height / 20 + 4;
+        XData.clear();
+        YData.clear();
+
+        for (const stepVibro &el : data->steps)
+        {
+            YData.append(el.sigma1_);
+
         }
         XData = convertToN(data);
-        doc.insertImage(positionImg,5,*insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости эффективного вертикального\nнапряжения от числа циклов","Число циклов N","Осевое напряжение σ', кПа.",XData, YData));
         positionImg = positionImg + height / 20 + 4;
         XData.clear();
         YData.clear();
@@ -693,7 +706,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     left.setHorizontalAlignment(QXlsx::Format::AlignLeft);
     doc.write("A1","Test");
     qDebug() << "QApplication instance pointer:" << QCoreApplication::instance();
-    QVector<double> XData, YData, YData2, ZData;
+    QVector<double> XData, YData, ZData;
 
     doc.setColumnWidth(1,25);
     doc.write(1,1,"Высота");
@@ -776,9 +789,21 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     for (const stepVibro &el : data->steps)
     {
         YData.append(el.m_verticalPressure_kPa);
+        XData.append(el.m_time);
+    }
+    //XData = convertToN(data);
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
+    positionImg = positionImg + height / 20 + 4;
+    XData.clear();
+    YData.clear();
+
+    for (const stepVibro &el : data->steps)
+    {
+        YData.append(el.sigma1_);
+
     }
     XData = convertToN(data);
-    doc.insertImage(positionImg,5,*insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости эффективного вертикального\nнапряжения от числа циклов","Число циклов N","Осевое напряжение σ', кПа.",XData, YData));
     positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();

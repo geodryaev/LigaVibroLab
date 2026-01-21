@@ -39,11 +39,13 @@ public slots:
     void process(QVector<QPointF> *d, QVector<QPointF> *sinTemplate, double min, double max,double freq);
     void getMainGraph(double * minX, double * maxX, double * minY, double * maxY);
     void getDataForStencil(QVector<QPointF> * curvData, double minPress, double maxPress, double frequency, double phi);
-    void test();
+    void smoothMainGraph(QVector<QPointF> * d, QVector<QPointF> * temp);
 signals:
     void complateSinTemplates();
     void complateMainGraph(QVector<QPointF> * points);
     void tick();
+    void reloadMainGraph();
+
 
 private:
     double min;
@@ -92,7 +94,8 @@ signals:
     void getMainGraph(double *minX, double * maxX, double * minY, double * maxY);
     void getDataForStencil(QVector<QPointF> * curvData, double minPress, double maxPress, double frequency, double phi);
     void sendProcessSignals(QVector<QPointF> *d,QVector<QPointF> * sinTemplate,  double min, double max, double freq);
-    void test();
+    void smoothMainGraph(QVector<QPointF> * d, QVector<QPointF> * temp);
+
 private slots:
     void sendProcess(bool ev);
     void onPointClick(const QPointF &point);
@@ -104,6 +107,8 @@ private slots:
     void graphReload(const QVector<QPointF> & curvData);
     void reloadSinTemplates();
     void getDataMainGraph(QVector<QPointF> points);
+    void reloadMainGraph();
+    void on_pushButton_clicked();
 };
 
 
