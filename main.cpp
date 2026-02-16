@@ -17,5 +17,6 @@ int main(int argc, char *argv[])
     w.setWindowIcon(QIcon(":/files/icon.png"));
     w.show();
 
+
     return a.exec();
 }

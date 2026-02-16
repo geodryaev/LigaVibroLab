@@ -35,7 +35,7 @@
       </property>
       <widget class="QWidget" name="seismic">
        <attribute name="title">
-        <string>Сейчсмическая разжижаемость</string>
+        <string>Сейсмическая разжижаемость</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
@@ -240,22 +240,6 @@
               </property>
               <property name="value">
                <double>0.500000000000000</double>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="1">
-             <widget class="QCheckBox" name="checkBox_2">
-              <property name="text">
-               <string>Обнулить поровое давление</string>
-              </property>
-              <property name="checkable">
-               <bool>true</bool>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-              <property name="tristate">
-               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -577,19 +561,6 @@
               </property>
              </widget>
             </item>
-            <item row="5" column="1">
-             <widget class="QCheckBox" name="checkBox">
-              <property name="text">
-               <string>Обнулить поровое давление</string>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-              <property name="tristate">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
            </layout>
           </item>
           <item>
@@ -696,7 +667,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">

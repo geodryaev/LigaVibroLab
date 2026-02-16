@@ -11,13 +11,7 @@ if(NOT DEFINED VCPKG_INSTALLED_DIR)
     set(VCPKG_INSTALLED_DIR "C:/vcpkg/installed")
 endif()
 
-#if(MSVC)
-#  cmake_policy(SET CMP0091 NEW)
-#  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<#$<CONFIG:Debug>:Debug>DLL")
-#endif()
-
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Svg)
-
 
 # РУЧНЫЕ ПУТИ (оставь только если не можешь использовать find_package)
 set(QWT_INCLUDE_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/include")
@@ -27,7 +21,8 @@ set(QWT_LIBRARY_DIR_D "${VCPKG_INSTALLED_DIR}/x64-windows/debug/lib")
 set(QWT_LIB $<$<CONFIG:Debug>:${QWT_LIBRARY_DIR_D}/qwtd.lib>$<$<CONFIG:Release>:${QWT_LIBRARY_DIR}/qwt.lib>)
 
 set(QXLSX_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
-set(QXLSX_LIB "${CMAKE_CURRENT_SOURCE_DIR}/libs/QXlsxQt6.lib")
+set(QXLSX_LIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/libs/QXlsxQt6Deb.lib")
+set(QXLSX_LIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/libs/QXlsxQt6Rel.lib")
 
 add_executable(VibroProcessing WIN32
   main.cpp
@@ -67,5 +62,7 @@ target_link_libraries(VibroProcessing PRIVATE
   Qt6::Network
   Qt6::Svg
   ${QWT_LIB}
-  ${QXLSX_LIB}
+  $<$<CONFIG:Debug>:${QXLSX_LIB_DEBUG}>
+  $<$<NOT:$<CONFIG:Debug>>:${QXLSX_LIB_RELEASE}>
+  #${QXLSX_LIB}
 )

@@ -25,16 +25,26 @@ supportmodul::supportmodul(bool def, int countCicle, const vibroData* data_, QWi
     ui->setupUi(this);
     ui->selectCicle->setMaximum(data->minPoints.size());
     ui->selectCicle->setMinimum(2);
-
+    ui->space->hide();
+    ui->label_4->hide();
     d_plot = new QwtPlot (nullptr);
     QVBoxLayout *layout = new QVBoxLayout (ui->graph);
     layout->addWidget(d_plot);
     int count = 0;
+    bool start = true;
 
-        bool start = true;
+    connect(ui->space,&QSpinBox::valueChanged, this, [=](int k){
+        SpaceStart = k;
+        changeRange(SpaceStart);
+
+    });
 
     if(choice)
     {
+        ui->space->show();
+        ui->label_4->show();
+        ui->space->setMinimum(0);
+        ui->space->setValue(0);
         ui->label->setText("Вычисление динамического модуля упругости");
         ui->value->setText("E<sup>y</sup><sub>d</sub> = 0 МПа.");
         setWindowTitle("Вычисление динамического модуля упругости");
@@ -47,7 +57,7 @@ supportmodul::supportmodul(bool def, int countCicle, const vibroData* data_, QWi
         {
             ui->selectCicle->setMaximum(data->minPoints.size());
         }
-
+        ui->space->setMaximum(data->minPoints.size()-ui->selectCicle->maximum());
         d_plot->setTitle("Определение динамического модуля упругости");
         for (int i = 0; i < data->steps.size() && count < countCicle+1; i++)
         {
@@ -89,8 +99,8 @@ supportmodul::supportmodul(bool def, int countCicle, const vibroData* data_, QWi
         }
     }
 
-    d_plot->setAxisTitle(QwtAxis::YLeft, QwtText("Осевое напряжение Δσ′<sub>1</sub>, кПа."));
-    d_plot->setAxisTitle(QwtAxis::XBottom, QwtText("Осевая деформация Δe*10<sup>-3</sup>, д.е."));
+    d_plot->setAxisTitle(QwtAxis::YLeft, QwtText("Осевое напряжение σ′<sub>1</sub>, кПа."));
+    d_plot->setAxisTitle(QwtAxis::XBottom, QwtText("Осевая деформация ε*10<sup>-3</sup>, д.е."));
 
     connect(ui->selectCicle,&QSpinBox::valueChanged,this,&supportmodul::changeRange);
 
@@ -156,7 +166,7 @@ void supportmodul::processingModileDeform(bool checked)
     QPointF point3;
 
     bool down = true;
-    int numberCicle = btn->text().toInt()-1;
+    int numberCicle = btn->text().toInt()-1 + SpaceStart;
     int count = 0;
 
     if (choice)
@@ -165,15 +175,15 @@ void supportmodul::processingModileDeform(bool checked)
         {
             if (data->steps[i].isDown)
             {
-                if (count == numberCicle + 1)
+                if (count == numberCicle)
                 {
-                    point1.setX( data->steps[i].epsilon_ * 1000);
-                    point1.setY( data->steps[i].sigma1_);
+                    point1.setX(data->steps[i].epsilon_ * 1000);
+                    point1.setY(data->steps[i].sigma1_);
                     down = true;
                 }
-                if (count == numberCicle + 2)
+                if (count == numberCicle + 1)
                 {
-                    point3.setX( data->steps[i].epsilon_ * 1000);
+                    point3.setX(data->steps[i].epsilon_ * 1000);
                     point3.setY(data->steps[i].sigma1_);
                 }
                 count++;
@@ -209,7 +219,7 @@ void supportmodul::processingModileDeform(bool checked)
         vector(point2.x(),point2.y(), point2.x(), point1.y());
         setText(3,"Δσ′",point2.x(),point2.y(), point2.x(), point1.x());
 
-        vector(point3.x(),point3.y(),point2.x(),point3.y());
+        vector(point3.x(),point1.y(),point2.x(),point1.y());
         setText(1,"Δε<sub>y</sub>",point3.x(),point3.y(),point2.x(),point3.y());
 
         dinamicModElastic = (point2.y()-point1.y()) /(point2.x()-point3.x());
@@ -288,8 +298,6 @@ void supportmodul::vector(double x1, double y1, double x2, double y2)
     supCurv[supCurv.size()-1]->setSamples(xs,ys);
     supCurv[supCurv.size()-1]->setPen(Qt::red,2);
     supCurv[supCurv.size()-1]->attach(d_plot);
-
-
 }
 
 void supportmodul::setText(int maskPosition, QString text, double x1, double y1, double x2, double y2) // 0 up 1 down 2 left 3 right
@@ -418,27 +426,29 @@ void supportmodul::on_buttonBox_accepted()
 
 void supportmodul::changeRange(int index)
 {
+    int count = 0;
+    bool start = false;
+
     clear();
     qDeleteAll(vecButton);
+
     d_plot->detachItems(QwtPlotItem::Rtti_PlotCurve, true);
     d_plot->replot();
-    int count = 0;
-    bool start = true;
 
     vX.clear();
     vY.clear();
+
     if (index == 0 && !choice)
     {
         index = data->steps.size();
     }
-    if (index > 0 && index < 3)
-    {
-        index = 3;
-    }
-    for (int i = 0; i < data->steps.size() && count < index+1; i++)
+
+
+    for (int i = 0; i < data->steps.size() && count-SpaceStart < index; i++)
     {
         if (data->steps[i].isDown)
             count++;
+
         if (start)
         {
             vX.push_back(data->steps[i].epsilon_ * 1000);
@@ -446,10 +456,11 @@ void supportmodul::changeRange(int index)
         }
         else
         {
-            if (count > 2)
+            if (count > SpaceStart)
                 start = true;
         }
     }
+
     QwtPlotCurve *curv = new QwtPlotCurve (QwtPlotCurve("e(t)"));
     curv->setSamples(vX,vY);
     curv->attach(d_plot);

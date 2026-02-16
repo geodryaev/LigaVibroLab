@@ -30,6 +30,7 @@ private slots:
     void changeRange(int index);
 
 private:
+    int SpaceStart = 0;
     Ui::supportmodul *ui;
     QwtPlot *d_plot;
     QwtPlotGrid grid;

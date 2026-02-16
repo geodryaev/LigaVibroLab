@@ -14,22 +14,18 @@ correctInput::correctInput(vibroData * _data, const double max, const double min
     ui->min->setValue(min);
     ui->max->setValue(max);
     ui->freq->setValue(freq);
-    ui->sinPosGorizont->setStyleSheet(R"(QSlider::sub-page:horizontal {background: transparent;})");
-    ui->sinPosGorizont->hide();
     ui->autoAdjustmen->hide();
-    ui->sinPosGorizont->setMinimum(-1000);
-    ui->sinPosGorizont->setMaximum(1000);
-    ui->sinPosGorizont->setValue(0);
     ui->progressBar->setMaximum(static_cast<int>(M_PI * 2 * 100));
     ui->progressBar->hide();
     ui->editMainGraph->hide();
+
     plot = new QwtPlot(this);
     sineCurv = new QwtPlotCurve("");
     sineCurv->setPen(QPen(Qt::blue,3));
-
     picker = new QwtPlotPicker(plot->canvas());
-
-
+    grid = new QwtPlotGrid();
+    zoom = new QwtPlotZoomer(plot->canvas());
+    curv = new QwtPlotCurve("");
     worker = new autoAdjustment(data);
     thread = new QThread (this);
     worker->moveToThread(thread);
@@ -57,12 +53,11 @@ correctInput::correctInput(vibroData * _data, const double max, const double min
     });
 
 
+
     plot->setTitle("График нагрузки");
     plot->setCanvasBackground(Qt::white);
     plot->setAxisTitle(QwtPlot::xBottom, "Время, мин.");
     plot->setAxisTitle(QwtPlot::yLeft, "Усилие, кПа.");
-
-
 
     picker->setStateMachine(new QwtPickerClickPointMachine());
     picker->setMousePattern(QwtEventPattern::MouseSelect1, Qt::RightButton);
@@ -72,7 +67,9 @@ correctInput::correctInput(vibroData * _data, const double max, const double min
 
     picker->setTrackerPen(QPen(Qt::black));
 
-    emit getMainGraph(&minValX,&maxValX,&minValY,&maxValY);
+    QTimer::singleShot(1, this, [this]() {
+        emit getMainGraph(&minValX,&maxValX,&minValY,&maxValY);
+    });
 
 }
 
@@ -86,10 +83,9 @@ correctInput::~correctInput()
 
 void correctInput::sendProcess(bool ev)
 {
-    emit sendProcessSignals(&pointsMainGraph, &pointsTemplatesGraph,maxSinTemp,minSinTemp,freqSinTemp);
+    emit sendProcessSignals(&pointsMainGraph, &pointsTemplatesGraph,minSinTemp,maxSinTemp,freqSinTemp);
     ui->autoAdjustmen->hide();
     ui->editMainGraph->show();
-    ui->sinPosGorizont->hide();
 }
 
 void correctInput::addSineStencil(bool checked)
@@ -101,7 +97,6 @@ void correctInput::addSineStencil(bool checked)
 
     if (checked)
     {
-        ui->sinPosGorizont->show();
         ui->autoAdjustmen->show();
         ui->max->hide();
         ui->min->hide();
@@ -114,7 +109,6 @@ void correctInput::addSineStencil(bool checked)
     }
     else
     {
-        ui->sinPosGorizont->hide();
         ui->autoAdjustmen->hide();
         ui->max->show();
         ui->min->show();
@@ -178,8 +172,6 @@ void correctInput::onPointClick(const QPointF &point)
 void correctInput::paintMainGraph(QVector<QPointF> * points)
 {
     pointsMainGraph = *points;
-    curv = new QwtPlotCurve("");
-    QwtPlotGrid *grid = new QwtPlotGrid();
 
     plot->setAxisScale(QwtPlot::xBottom, minValX, maxValX);
     plot->setAxisScale(QwtPlot::yLeft, minValY, maxValY);
@@ -190,7 +182,7 @@ void correctInput::paintMainGraph(QVector<QPointF> * points)
     grid->setMajorPen(QPen(Qt::lightGray, 1, Qt::DashLine));
     grid->setMinorPen(QPen(Qt::gray, 1, Qt::DotLine));
     grid->attach(plot);
-    QwtPlotZoomer * zoom = new QwtPlotZoomer(plot->canvas());
+
     zoom->setRubberBand(QwtPicker::RectRubberBand);
     zoom->setRubberBandPen (QColor(Qt::blue));
     zoom->setTrackerMode(QwtPicker::AlwaysOn);
@@ -308,6 +300,131 @@ void autoAdjustment::smoothMainGraph(QVector<QPointF> *d, QVector<QPointF> *temp
     emit reloadMainGraph();
 }
 
+void autoAdjustment::smoothTemplateGraph(QVector<QPointF> *p)
+{
+    QVector<QPointF>::Iterator it = p->begin();
+    QVector<QPointF>::Iterator begin = p->begin();
+    QVector<QPointF>::Iterator end = p->begin();
+
+    double middle = (max + min)/2;
+    bool state = upToFirstPoint(&it);
+    while (it != p->end())
+    {
+        begin = it;
+        end = nextPoint(begin,p->end(),state);
+        it = end;
+
+        double target = summOffset(begin,end,p,state);
+        movePoints(begin,end,p,target,state);
+        state = !state;
+    }
+}
+
+//true навверх
+//false вниз
+bool autoAdjustment::upToFirstPoint(QVector<QPointF>::Iterator *it)
+{
+    double middle = (max + min)/2.0;
+    if ((*it)->y() == middle)
+    {
+        if ((*(it)+1)->y() > middle)
+            return true;
+    }
+    else
+    {
+        return false;
+    }
+
+    if ((*it)->y() < middle)
+    {
+        while((*it)->y() < middle)
+        {
+            ++(*it);
+        }
+        return true;
+    }
+
+    if ((*it)->y() > middle)
+    {
+        while((*it)->y() > middle)
+        {
+            ++(*it);
+        }
+        return false;
+    }
+
+    return false;
+}
+
+QVector<QPointF>::Iterator autoAdjustment::nextPoint(QVector<QPointF>::Iterator start, QVector<QPointF>::Iterator end, bool state)
+{
+    const double middle = (max + min)/2;
+
+    if (state)
+    {
+        while (start != end && start->y() >= middle)
+        {
+            start++;
+        }
+        return start;
+    }
+    else
+    {
+        while (start != end && start->y() <= middle)
+        {
+            start++;
+        }
+        return start;
+    }
+}
+
+// Тут по одной точек , можно попробовать по 3, хз
+double autoAdjustment::summOffset(QVector<QPointF>::Iterator s1, QVector<QPointF>::Iterator s2, QVector<QPointF> *p, bool state)
+{
+    double valueEdge = (max+min)/2;
+    if (state)
+    {
+        for(int i = std::distance(p->begin(), s1); i < std::distance(p->begin(),s2);i++)
+        {
+            if (valueEdge < data->steps[i].m_verticalPressure_kPa)
+                valueEdge = data->steps[i].m_verticalPressure_kPa;
+        }
+    }
+    else
+    {
+        for(int i = std::distance(p->begin(), s1); i < std::distance(p->begin(),s2);i++)
+        {
+            if (valueEdge > data->steps[i].m_verticalPressure_kPa)
+                valueEdge = data->steps[i].m_verticalPressure_kPa;
+        }
+    }
+
+    return std::abs(valueEdge - ((max-min)/2 + min));
+}
+
+void autoAdjustment::movePoints(QVector<QPointF>::Iterator s1, QVector<QPointF>::Iterator s2, QVector<QPointF> *p, double target, bool state)
+{
+    double shiftZerro = s1->x();
+    if (s1!= p->begin())
+    {
+        s1--;
+    }
+    if (state)
+    {
+        for (auto it = s1; it != s2; it++)
+        {
+            it->setY(sin((it->x()-shiftZerro) * 2*M_PI * freq  * 60) * target + (max - min)/2 + min);
+        }
+    }
+    else
+    {
+        for (auto it = s1; it != s2; it++)
+        {
+            it->setY(-1 * sin((it->x()-shiftZerro) * 2*M_PI * freq  * 60) * target + (max - min)/2 + min);
+        }
+    }
+}
+
 void autoAdjustment::process(QVector<QPointF> * d, QVector<QPointF> * sinTemplate, double min, double max,double freq)
 {
     this->max = max;
@@ -333,6 +450,7 @@ void autoAdjustment::process(QVector<QPointF> * d, QVector<QPointF> * sinTemplat
     }
 
     transformSinToRealData(phaseShift);
+    smoothTemplateGraph(&p_pointsTemplatesGraph);
     *sinTemplate = std::move(p_pointsTemplatesGraph);
     emit tick();
 }
@@ -362,7 +480,43 @@ void autoAdjustment::transformSinToRealData(double a)
 
 void correctInput::on_pushButton_clicked()
 {
+    if (selectedMarkers.size() == 2)
+    {
+        QwtPlotMarker * o1;
+        QwtPlotMarker * o2;
+        if (selectedMarkers[1]->xValue() > selectedMarkers[0]->xValue())
+        {
+            o1 = selectedMarkers[0];
+            o2 = selectedMarkers[1];
+        }
+        else
+        {
+            o1 = selectedMarkers[1];
+            o2 = selectedMarkers[0];
+        }
 
+        // auto left = std::lower_bound(data->steps.begin(),data->steps.end(),o1->xValue(),[](const stepVibro &p, double x){
+        //     return p.m_time < x;
+        // });
+        // auto right = std::lower_bound(data->steps.begin(),data->steps.end(),o2->xValue(),[](const stepVibro &p, double x){
+        //     return p.m_time < x;
+        // });
+
+        QVector<stepVibro> v;
+        for (int i = 0; i < data->steps.size(); i++)
+        {
+            if (data->steps[i].m_time >= o1->xValue() && data->steps[i].m_time <= o2->xValue())
+            {
+                v.push_back(data->steps[i]);
+            }
+            if (o2->xValue() < data->steps[i].m_time)
+                break;
+        }
+        if (v.size() != 0)
+        {
+            data->steps = std::move(v);
+        }
+    }
     accept();
 }
 

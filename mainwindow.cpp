@@ -57,17 +57,8 @@ void MainWindow::on_calculateVibro_clicked()
                         u0read = false;
                         u0 = list[6].toDouble();
                     }
+                    data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
 
-                    if (ui->checkBox_2->isChecked())
-                    {
-                        data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
-                        //qDebug() << list[6].toDouble();
-                    }
-                    else
-                    {
-                        data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble() - u0,list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),0);
-                        //qDebug() << list[6].toDouble() - u0;
-                    }
                 }
                 else
                 {
@@ -134,17 +125,7 @@ void MainWindow::on_calculateVibro_2_clicked()
                         u0 = list[6].toDouble();
                     }
 
-                    if (ui->checkBox_2->isChecked())
-                    {
-                        data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
-                        //qDebug() << list[6].toDouble();
-                    }
-                    else
-                    {
-                        data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble() - u0,list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),0);
-                        //qDebug() << list[6].toDouble() - u0;
-                    }
-
+                    data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),0);
                 }
                 else
                 {

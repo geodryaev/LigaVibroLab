@@ -57,6 +57,13 @@ private:
     QVector<QPointF> pointsTemplatesGraph;
     QVector<QPointF> p_pointsTemplatesGraph;
     QVector<QPointF> pointsMainGraph;
+
+private:
+    void smoothTemplateGraph(QVector<QPointF> *p);
+    bool upToFirstPoint(QVector<QPointF>::Iterator *it);
+    QVector<QPointF>::Iterator nextPoint(QVector<QPointF>::Iterator start, QVector<QPointF>::Iterator end, bool state);
+    double summOffset(QVector<QPointF>::Iterator s1, QVector<QPointF>::Iterator s2, QVector<QPointF> *p, bool state);
+    void movePoints(QVector<QPointF>::Iterator s1, QVector<QPointF>::Iterator s2, QVector<QPointF> *p, double target, bool state);
 };
 
 
@@ -81,6 +88,8 @@ private:
     QVector<QPointF> pointsMainGraph;
     QVector<QPointF> pointsTemplatesGraph;
     QVector<QwtPlotMarker*> selectedMarkers;
+    QwtPlotGrid *grid;
+    QwtPlotZoomer * zoom;
     QThread *thread;
     double minValX;
     double maxValX;

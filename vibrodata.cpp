@@ -50,7 +50,6 @@ void vibroData::normalizeData()
     }
     else
     {
-
         down = false;
     }
 
@@ -59,7 +58,7 @@ void vibroData::normalizeData()
         if (down)
         {
             currentMin = currentPoint;
-            while (currentPoint != steps.end() && currentPoint->m_verticalPressure_kPa < commonLine)
+            while (currentPoint != steps.end() && currentPoint->m_verticalPressure_kPa <= commonLine)
             {
                 if (currentMin->m_verticalPressure_kPa >  currentPoint->m_verticalPressure_kPa)
                     currentMin = currentPoint;
@@ -73,7 +72,7 @@ void vibroData::normalizeData()
         else
         {
             currentMax = currentPoint;
-            while (currentPoint != steps.end() && currentPoint->m_verticalPressure_kPa > commonLine)
+            while (currentPoint != steps.end() && currentPoint->m_verticalPressure_kPa >= commonLine)
             {
                 if (currentMax->m_verticalPressure_kPa <  currentPoint->m_verticalPressure_kPa)
                     currentMax = currentPoint;

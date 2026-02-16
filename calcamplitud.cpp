@@ -10,7 +10,7 @@ calcAmplitud::calcAmplitud(QWidget *parent)
     ui->amax->setSuffix(" м/с²");
     ui->denzity->setSuffix(" кг/м³");
     ui->ltav->setText("τ<sub>av</sub>");
-    ui->ltamp->setText("τ<sub>ampl</sub>");
+    ui->ltamp->setText("τ<sub>2ampl</sub>");
 }
 
 calcAmplitud::~calcAmplitud()
@@ -35,7 +35,7 @@ void calcAmplitud::on_pushButton_clicked()
         rd = 1.174 - 0.0267*h;
     }
 
-    ui->tav->setValue(( amax * rd * sigma_z / g) / 1000);
+    ui->tav->setValue(0.65*( amax * rd * sigma_z / g) / 1000);
     ui->tanpl->setValue(ui->tav->value()*4);
 }
 

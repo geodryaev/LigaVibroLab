@@ -113,7 +113,7 @@ double getW (QVector<double> *XData, QVector<double> *YData, const vibroData * d
     for (QVector<stepVibro>::ConstIterator it = data->steps.begin(); it < data->steps.end()-1; it++)
     {
         w+= 0.5f * ( (it+1)->m_verticalPressure_kPa + it->m_verticalPressure_kPa) * ((it+1)->epsilon_ - it->epsilon_);
-        XData->append(it->epsilon_);
+        XData->append(it->epsilon_ * 1000);
         YData->append(it->m_verticalPressure_kPa);
     }
 
@@ -434,7 +434,7 @@ QImage * Report::insertGraph(QString title, QString strX, QString strY, QString 
     txt = QwtText("PPR");
     pointToText = std::distance(yData2.begin(),std::max_element(yData2.begin(),yData2.end()));
     QwtPlotMarker *m2 = new QwtPlotMarker();
-    m2->setValue(xData[pointToText], yData2[pointToText]);
+    m2->setValue(xData[pointToText-1], yData2[pointToText-1]);
     m2->setLabel(txt);
     m2->setLabelAlignment(Qt::AlignCenter | Qt::AlignTop);
     QwtSymbol *sym2 = new QwtSymbol(QwtSymbol::Ellipse,
@@ -596,7 +596,7 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
             YData.append(el.PPR * 100);
         }
         XData = convertToN(data);
-        doc.insertImage(positionImg,5,*insertGraph("График зависимости относительного порового давления \nот числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData));
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости относительного порового давления \nот числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое\nдавление PPR, %",XData, YData));
         positionImg = positionImg + height / 20 + 4;
         XData.clear();
         YData.clear();
@@ -616,11 +616,11 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
 
         for (const stepVibro &el : data->steps)
         {
-            YData.append(el.m_verticalPressure_kPa);
+            YData.append(el.sigma1_);
             XData.append(el.m_time);
         }
         //XData = convertToN(data);
-        doc.insertImage(positionImg,5,*insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости эффективного вертикального\nнапряжения от времени","Время, мин.","Эффективное вертикальное\nнапряжение σ\u2032\u2081, кПа.",XData, YData));
         positionImg = positionImg + height / 20 + 4;
         XData.clear();
         YData.clear();
@@ -628,10 +628,9 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
         for (const stepVibro &el : data->steps)
         {
             YData.append(el.sigma1_);
-
         }
         XData = convertToN(data);
-        doc.insertImage(positionImg,5,*insertGraph("График зависимости эффективного вертикального\nнапряжения от числа циклов","Число циклов N","Осевое напряжение σ', кПа.",XData, YData));
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости эффективного вертикального\nнапряжения от числа циклов","Число циклов N","Эффективное вертикальное\nнапряжение σ\u2032\u2081, кПа.",XData, YData));
         positionImg = positionImg + height / 20 + 4;
         XData.clear();
         YData.clear();
@@ -639,7 +638,7 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
         double w = getW(&XData,&YData,data);
         doc.write(9,1,"ΔW");
         doc.write(9,2,QString::number(w,'f',6) + " кПа.");
-        doc.insertImage(positionImg,5, *insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
+        doc.insertImage(positionImg,5, *insertGraph("График зависимости девиаторного напряжения от\nотносительной осевой деформации","Осевая деформация ε * 10\u207B\u00B3", "Девиатор напряжений q, кПа.",XData,YData));
         positionImg = positionImg + height / 20 + 4;
 
 
@@ -770,7 +769,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
             YData.append(el.PPR * 100); //Потому что в графике проценты
     }
     XData = convertToN(data);
-    doc.insertImage(positionImg,5,*insertGraph("График зависимости относительного порового давления \nот числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое давление PPR, %",XData, YData));
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости относительного порового давления\nот числа циклов динамического нагружения","Число циклов нагружения N","Относительное поровое\nдавление PPR, %",XData, YData));
     positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();
@@ -780,7 +779,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
             YData.append(el.q);
             XData.append(el.p_);
     }
-    doc.insertImage(positionImg,5,*insertGraph("График зависимости максимальных касательных напряжений \nот средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData));
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости максимальных касательных напряжений\nот средних эффективных напряжений","p`, кПа.","q, кПа.",XData, YData));
     positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();
@@ -788,11 +787,11 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
 
     for (const stepVibro &el : data->steps)
     {
-        YData.append(el.m_verticalPressure_kPa);
+        YData.append(el.sigma1_);
         XData.append(el.m_time);
     }
     //XData = convertToN(data);
-    doc.insertImage(positionImg,5,*insertGraph("График зависимости напряжения от времени","Время, мин.","Вертикальное напряжение, кПа.",XData, YData));
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости эффективного вертикального\nнапряжения от времени","Время, мин.","Эффективное вертикальное\nнапряжение σ\u2032\u2081, кПа.",XData, YData));
     positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();
@@ -803,7 +802,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
 
     }
     XData = convertToN(data);
-    doc.insertImage(positionImg,5,*insertGraph("График зависимости эффективного вертикального\nнапряжения от числа циклов","Число циклов N","Осевое напряжение σ', кПа.",XData, YData));
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости эффективного вертикального\nнапряжения от числа циклов","Число циклов N","Эффективное вертикальное\nнапряжение σ\u2032\u2081, кПа.",XData, YData));
     positionImg = positionImg + height / 20 + 4;
     XData.clear();
     YData.clear();
@@ -811,11 +810,11 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     double w = getW(&XData,&YData,data);
     doc.write(9,1,"ΔW");
     doc.write(9,2,QString::number(w,'f',6) + " кПа.");
-    doc.insertImage(positionImg,5, *insertGraph("График Σ–Ε","Осевая деформация ε", "Девиатор напряжений σ, кПа.",XData,YData));
+    doc.insertImage(positionImg,5, *insertGraph("График зависимости девиаторного напряжения от\nотносительной осевой деформации","Осевая деформация ε * 10\u207B\u00B3", "Девиатор напряжений q, кПа.",XData,YData));
     positionImg = positionImg + height / 20 + 4;
 
     getXYDataEpsD(&XData,&YData,data);
-    doc.insertImage(positionImg,5,*insertGraph("ε = f(lnt)","Время, ln(мин.)","Осевая деформация ε, %",XData, YData,&a,&b));
+    doc.insertImage(positionImg,5,*insertGraph("ε = f(lnt)","Время, ln(мин.)","Осевая деформация (ε), д.е.",XData, YData,&a,&b));
     positionImg = positionImg + height / 20 + 4;
     doc.write(10,1,"a");
     doc.write(10,2, a);
@@ -825,6 +824,9 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     doc.write(12,2,"1");
     doc.write(13,1,"ɛ(d)");
     doc.write(13,2,"=B10*ln(B12)+B11");
+    doc.write(14, 1, "y = a * x + b");
+    QString s = (b > 0) ?  " + " + QString::number(b) : QString::number(b);
+    doc.write(15, 1, "ɛ = " + QString::number(a) + " * ln t " + s);
     XData.clear();
     YData.clear();
 
