@@ -13,6 +13,7 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Svg)
 
+
 # РУЧНЫЕ ПУТИ (оставь только если не можешь использовать find_package)
 set(QWT_INCLUDE_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/include")
 set(QWT_LIBRARY_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/lib")
@@ -47,7 +48,7 @@ add_executable(VibroProcessing WIN32
 
 target_include_directories(VibroProcessing PRIVATE ${QWT_INCLUDE_DIR})
 target_compile_definitions(VibroProcessing PRIVATE QWT_DLL)
-
+target_sources(VibroProcessing PRIVATE appicon.rc)
 target_include_directories(VibroProcessing PRIVATE ${QXLSX_INCLUDE_DIR})
 
 #if(MSVC)

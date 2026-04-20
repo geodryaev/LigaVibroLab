@@ -367,21 +367,22 @@ QImage * Report::insertGraph(QString title, QString strX, QString strY, QString 
     double minValY2 = *std::min_element(yData2.begin(), yData2.end()) * 0.8;
     double maxValY2 = *std::max_element(yData2.begin(), yData2.end()) * 1.2;
 
-    if (minValY2 < minValY)
-    {
-        minValY = minValY2;
-    }
+    // if (minValY2 < minValY)
+    // {
+    //     minValY = minValY2;
+    // }
 
-    if (maxValY2 > maxValY)
-    {
-        maxValY = maxValY2;
-    }
+    // if (maxValY2 > maxValY)
+    // {
+    //     maxValY = maxValY2;
+    // }
 
     plot->setStyleSheet(QString("background-color: %1").arg(colorBackround.name()));
 
-    QwtText tTitle (title);
+    QwtText tTitle(title);
     QwtText xTitle(strX);
-    QwtText yTitle(strY);
+    QwtText yTitleLeft(strY);
+    QwtText yTitleRight(strY2);
 
     QFont ticksFont;
     QFont font = tTitle.font();
@@ -396,12 +397,14 @@ QImage * Report::insertGraph(QString title, QString strX, QString strY, QString 
 
     tTitle.setFont(font);
     xTitle.setFont(axisTitleFont);
-    yTitle.setFont(axisTitleFont);
+    yTitleLeft.setFont(axisTitleFont);
+    yTitleRight.setFont(axisTitleFont);
 
     plot->setTitle(tTitle);
 
     plot->setAxisTitle(QwtPlot::xBottom, xTitle);
-    plot->setAxisTitle(QwtPlot::yLeft, yTitle);
+    plot->setAxisTitle(QwtPlot::yLeft, yTitleLeft);
+    plot->setAxisTitle(QwtPlot::yRight, yTitleRight);
     plot->setAxisScale(QwtPlot::xBottom, minValX, maxValX);
     plot->setAxisScale(QwtPlot::yLeft, minValY, maxValY);
     plot->setAxisScale(QwtPlot::yRight, minValY2, maxValY2);
@@ -413,7 +416,7 @@ QImage * Report::insertGraph(QString title, QString strX, QString strY, QString 
 
     QwtText txt = QwtText("ε");
     txt.setFont(font);
-    int pointToText = std::distance(yData.begin(),std::max_element(yData.begin(),yData.end()));
+    int pointToText = std::distance(yData.begin(),std::max_element(yData.begin()+((int)(xData.size()*0.1)),yData.end()-((int)(xData.size()*0.1))));
     QwtPlotMarker *m = new QwtPlotMarker();
     m->setValue(xData[pointToText], yData[pointToText]);
     m->setLabel(txt);
@@ -429,12 +432,16 @@ QImage * Report::insertGraph(QString title, QString strX, QString strY, QString 
     QwtPlotCurve *curv2 = new QwtPlotCurve("");
     curv2->setSamples(xData, yData2);
     curv2->setPen(QPen(colorGraph2,lineSize));
+    curv2->setYAxis(QwtPlot::yRight);
     curv2->attach(plot);
 
     txt = QwtText("PPR");
-    pointToText = std::distance(yData2.begin(),std::max_element(yData2.begin(),yData2.end()));
+    pointToText = std::distance(yData2.begin(),std::max_element(yData2.begin()+((int)(xData.size()*0.1)),yData2.end()-((int)(xData.size()*0.1))));
     QwtPlotMarker *m2 = new QwtPlotMarker();
+    m2->setAxes(QwtPlot::xBottom, QwtPlot::yRight);
     m2->setValue(xData[pointToText-1], yData2[pointToText-1]);
+
+
     m2->setLabel(txt);
     m2->setLabelAlignment(Qt::AlignCenter | Qt::AlignTop);
     QwtSymbol *sym2 = new QwtSymbol(QwtSymbol::Ellipse,
@@ -445,7 +452,7 @@ QImage * Report::insertGraph(QString title, QString strX, QString strY, QString 
     m2->setSymbol(sym2);
     m2->setLineStyle(QwtPlotMarker::NoLine);
 
-    m2->attach(plot);;
+    m2->attach(plot);
 
     QwtPlotGrid *grid = new QwtPlotGrid();
     grid->setMajorPen(QPen(Qt::lightGray, 1, Qt::DashLine));
@@ -546,8 +553,21 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
 
         doc.renameSheet("Sheet1","Отчет") ? qDebug() << "Good" : qDebug() << "Not good";
 
+        double maxPPR = data->steps[0].PPR;
+        double maxEpsilon = data->steps[0].epsilon_;
+        int currentStepsMaxPPR = 0;
         for(const stepVibro &el:data->steps)
         {
+            if (maxEpsilon < el.epsilon_)
+            {
+                maxEpsilon = el.epsilon_;
+            }
+            doc.write(6,2,"Макимальная деформация ε = " + QString::number(maxEpsilon * 100));
+            if (maxPPR < el.PPR)
+            {
+                maxPPR = el.PPR;
+                currentStepsMaxPPR = el.numberTact;
+            }
             if (el.PPR >= 1.0f)
             {
                 doc.write(6,1,"Факт разжижения зафиксирован на " + QString::number(el.numberTact));
@@ -555,14 +575,17 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
                 doc.write(8,1, "Разжижение наступило");
                 break;
             }
-            if (el.PPR >= 0.95 and el.epsilon_ > 0.05)
+            if (el.PPR >= 0.95f && el.epsilon_ > 0.05f)
             {
+
                 doc.write(6,1, "Факт разжижения зафиксирован на " + QString::number(el.numberTact));
                 doc.write(7,1, "Критерий кобинированный : PPR = " + QString::number(el.PPR) + ", ε = " + QString::number(el.epsilon_) + " %");
                 doc.write(8,1, "Разжижение наступило");
                 break;
             }
-            doc.write(6,1, "Разжижение не наступило");
+            qDebug() << el.PPR << "-" <<el.epsilon_;
+            doc.write(6,1, "Разжижение не наступило, максимальное значение PPR: " + QString::number(maxPPR) + " на ступени нагружения №" + QString::number(currentStepsMaxPPR));
+
         }
 
 
@@ -583,7 +606,7 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
             ZData.append(el.PPR);
         }
         XData = convertToN(data);
-        doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деф. и относ. порового давления от числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",
+        doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деф. и относ. порового давления \nот числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",
                                                      "Отностительное поровое давление PPR",XData, YData, ZData));
         positionImg = positionImg + height / 20 + 4;
         XData.clear();
@@ -719,8 +742,21 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     doc.write(5,1,"Количество циклов");
     doc.write(5,2, data->minPoints.size(),left );
 
+    double maxPPR = data->steps[0].PPR;
+    double maxEpsilon = data->steps[0].epsilon_;
+    int currentStepsMaxPPR = 0;
     for(const stepVibro &el:data->steps)
     {
+        if (maxEpsilon < el.epsilon_)
+        {
+            maxEpsilon = el.epsilon_;
+        }
+        doc.write(6,2,"Макимальная деформация ε = " + QString::number(maxEpsilon * 100));
+        if (maxPPR < el.PPR)
+        {
+            maxPPR = el.PPR;
+            currentStepsMaxPPR = el.numberTact;
+        }
         if (el.PPR >= 1.0f)
         {
             doc.write(6,1,"Факт разжижения зафиксирован на " + QString::number(el.numberTact));
@@ -728,14 +764,16 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
             doc.write(8,1, "Разжижение наступило");
             break;
         }
-        if (el.PPR >= 0.95 and el.epsilon_ > 0.05)
+        if (el.PPR >= 0.95f && el.epsilon_ > 0.05f)
         {
+
             doc.write(6,1, "Факт разжижения зафиксирован на " + QString::number(el.numberTact));
             doc.write(7,1, "Критерий кобинированный : PPR = " + QString::number(el.PPR) + ", ε = " + QString::number(el.epsilon_) + " %");
             doc.write(8,1, "Разжижение наступило");
             break;
         }
-        doc.write(6,1, "Разжижение не наступило");
+        qDebug() << el.PPR << "-" <<el.epsilon_;
+        doc.write(6,1, "Разжижение не наступило, максимальное значение PPR: " + QString::number(maxPPR) + " на ступени нагружения №" + QString::number(currentStepsMaxPPR));
     }
 
 
@@ -756,7 +794,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
         ZData.append(el.PPR);
     }
     XData = convertToN(data);
-    doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деф. и относ. порового давления от числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",
+    doc.insertImage(positionImg,5,*insertGraph("График зависимости осевой деф. и относ. порового давления \nот числа циклов нагружения","Число циклов нагружения N","Осевая деформация ε, %",
                                                  "Отностительное поровое давление PPR",XData, YData, ZData));
     positionImg = positionImg + height / 20 + 4;
     XData.clear();
@@ -814,7 +852,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
     positionImg = positionImg + height / 20 + 4;
 
     getXYDataEpsD(&XData,&YData,data);
-    doc.insertImage(positionImg,5,*insertGraph("ε = f(lnt)","Время, ln(мин.)","Осевая деформация (ε), д.е.",XData, YData,&a,&b));
+    doc.insertImage(positionImg,5,*insertGraph("ε = f(lnt)","Время, ln(сек.)","Осевая деформация (ε), д.е.",XData, YData,&a,&b));
     positionImg = positionImg + height / 20 + 4;
     doc.write(10,1,"a");
     doc.write(10,2, a);
