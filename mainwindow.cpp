@@ -32,7 +32,14 @@ void MainWindow::on_calculateVibro_clicked()
 {
     bool hat = true;
     bool u0read = true;
+    bool highFlags = false;
+    bool start = true;
+
     double u0;
+
+    int  startCropIndex;
+    QVector<stepVibro>::iterator endCrop;
+
     QString str;
     QStringList list;
     QString filePath = QFileDialog::getOpenFileName(this, "Выберите CSV файл","","CSV файлы (*.csv)");
@@ -57,24 +64,39 @@ void MainWindow::on_calculateVibro_clicked()
                         u0read = false;
                         u0 = list[6].toDouble();
                     }
-                    data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
+                    if (list[2] == "VIBRO" && start)
+                    {
+                        highFlags = true;
+                        start = false;
+                        data->steps.clear();
+                    }
 
+                    if (!highFlags)
+                    {
+                        data->push(list[0].toDouble(),list[2].trimmed(), list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
+                    }
+                    else
+                    {
+                        if (list[2] == "VIBRO")
+                        {
+                            data->push(list[0].toDouble() / 1000 / 60 ,list[2].trimmed(), list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),u0);
+
+                        }
+                    }
                 }
                 else
                 {
                     hat = false;
                 }
             }
-            //qDebug() << Q_FUNC_INFO;
         }
 
-        smooth_graph();
 
         correctInput * cor = new correctInput(data, ui->maxAmpl->value(), ui->minAmpl->value(), ui->frquency->value(), this);
         cor->setWindowState(Qt::WindowMaximized);
         if (cor->exec() == QDialog::Accepted)
         {
-            data->normalizeData();
+            data->normalizeData(highFlags);
             report.reportToFileExcelVibrocell(data);
             delete(data);
         }
@@ -87,17 +109,19 @@ void MainWindow::on_calculateVibro_clicked()
 
 }
 
-void MainWindow::smooth_graph()
-{
-
-}
-
 //Cейсмо
 void MainWindow::on_calculateVibro_2_clicked()
 {
     bool hat = true;
     bool u0read = true;
+    bool highFlags = false;
+    bool start = true;
+
     double u0;
+
+    QVector<stepVibro>::iterator startCrop;
+    QVector<stepVibro>::iterator endCrop;
+
     QString str;
     QStringList list;
     QString filePath = QFileDialog::getOpenFileName(this, "Выберите CSV файл","","CSV файлы (*.csv)");
@@ -125,21 +149,40 @@ void MainWindow::on_calculateVibro_2_clicked()
                         u0 = list[6].toDouble();
                     }
 
-                    data->push(list[0].toDouble(),list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),0);
+                    data->push(list[0].toDouble(),list[2].trimmed(), list[3].toDouble(),list[4].toDouble(),list[5].toDouble(),list[6].toDouble(),list[7].toDouble(),list[8].toDouble(),list[9].toDouble(),list[10].toDouble(),list[11].toDouble(),list[1].toDouble(),0);
+
+                    if (list[2] == "VIBRO")
+                    {
+                        highFlags = true;
+
+                        if (start)
+                        {
+                            startCrop = data->steps.end()-1;
+                            start = false;
+
+                        }
+
+                        endCrop = data->steps.end()-1;
+                    }
+
                 }
                 else
                 {
                     hat = false;
                 }
             }
-            qDebug() << Q_FUNC_INFO;
+        }
+
+        if (highFlags)
+        {
+            data->cropHigh(startCrop,endCrop);
         }
 
         correctInput * cor = new correctInput(data, ui->maxAmpl_2->value(), ui->minAmpl_2->value(), ui->frquency_2->value(), this);
         cor->setWindowState(Qt::WindowMaximized);
         if (cor->exec() == QDialog::Accepted)
         {
-            data->normalizeData();
+            data->normalizeData(highFlags);
             report.reportToFileExcelSeismic(data);
             qDebug() << 1;
             delete(data);

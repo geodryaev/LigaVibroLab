@@ -6,6 +6,7 @@
 class stepVibro
 {
 public:
+    QString m_nameSteps;
     double m_u0;
     double m_time;
     double m_verticalPressure_kPa;
@@ -39,7 +40,7 @@ public:
 
 
     stepVibro(){}
-    stepVibro(double time, double verticalPressure_KPA,
+    stepVibro(double time, QString step, double verticalPressure_KPA,
               double shearPressure_KPA, double cellPressure_KPA,
               double porePressure_KPA,double porePressureAux_kPA,
               double verticalDeform_mm, double m_shearDeform_mm,

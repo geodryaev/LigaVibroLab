@@ -495,13 +495,6 @@ void correctInput::on_pushButton_clicked()
             o2 = selectedMarkers[0];
         }
 
-        // auto left = std::lower_bound(data->steps.begin(),data->steps.end(),o1->xValue(),[](const stepVibro &p, double x){
-        //     return p.m_time < x;
-        // });
-        // auto right = std::lower_bound(data->steps.begin(),data->steps.end(),o2->xValue(),[](const stepVibro &p, double x){
-        //     return p.m_time < x;
-        // });
-
         QVector<stepVibro> v;
         for (int i = 0; i < data->steps.size(); i++)
         {

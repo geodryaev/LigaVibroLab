@@ -3,18 +3,21 @@
 #include "supportmodul.h"
 #include "xlsxrichstring.h"
 #include "QFont"
+
+#include "qwt/qwt_text.h"
+#include "qwt/qwt_plot_layout.h"
+#include "qwt/qwt_plot_canvas.h"
+#include "xlsxchart.h"
+
+
+#include "qwt/qwt_scale_draw.h"
+#include <qwt/qwt_scale_widget.h>
+#include <qwt/qwt_plot_marker.h>
 #include <QDesktopServices>
 #include <QUrl>
 #include <QSvgGenerator>
 #include <QFont>
 #include <QSettings>
-#include "qwt/qwt_text.h"
-#include "qwt/qwt_plot_layout.h"
-#include "qwt/qwt_plot_canvas.h"
-#include "xlsxchart.h"
-#include "qwt/qwt_scale_draw.h"
-#include <qwt/qwt_scale_widget.h>
-#include <qwt/qwt_plot_marker.h>
 
 
 Report::Report()
@@ -30,7 +33,7 @@ double getA(QVector<QPair<double,double>>::Iterator it, QVector<QPair<double,dou
     double sigma3 = 0; //y
     double sigma4 = 0; //x*x
     int count = 0;
-    for (int i = 0; it+i != end; i++)
+    for (int i = 0; it+i < end ; i++)
     {
         count++;
         sigma1 += (it+i)->first * (it+i)->second;
@@ -47,7 +50,7 @@ double getB(QVector<QPair<double,double>>::Iterator it,QVector<QPair<double,doub
     double sigma1 = 0; //y
     double sigma2 = 0; //x
     int count = 0;
-    for (int i = 0;it+i != end; i++)
+    for (int i = 0;it+i < end; i++)
     {
         count++;
         sigma1 += (it+i)->second;
@@ -59,11 +62,12 @@ double getB(QVector<QPair<double,double>>::Iterator it,QVector<QPair<double,doub
 
 void getFunc(QVector<QPair<double,double>>* vec, double* a, double* b)
 {
-
+    double startSpace = vec->size() *0.5;
+    int count = 0;
     QVector <QPair<double,double>>::Iterator  it = vec->begin();
-    for (; it < vec->end() and  it->first < 6;  it++)
+    for (; it < vec->end() and  count < startSpace;  it++)
     {
-        it++;
+        count++;
     }
 
     *a = getA(it, vec->end());
@@ -660,7 +664,7 @@ void Report::reportToFileExcelSeismic(const vibroData *data)
 
         double w = getW(&XData,&YData,data);
         doc.write(9,1,"ΔW");
-        doc.write(9,2,QString::number(w,'f',6) + " кПа.");
+        doc.write(9,2,QString::number(w,'f',6) + " кДж/м3");
         doc.insertImage(positionImg,5, *insertGraph("График зависимости девиаторного напряжения от\nотносительной осевой деформации","Осевая деформация ε * 10\u207B\u00B3", "Девиатор напряжений q, кПа.",XData,YData));
         positionImg = positionImg + height / 20 + 4;
 
@@ -847,7 +851,7 @@ void Report::reportToFileExcelVibrocell(const vibroData* data)
 
     double w = getW(&XData,&YData,data);
     doc.write(9,1,"ΔW");
-    doc.write(9,2,QString::number(w,'f',6) + " кПа.");
+    doc.write(9,2,QString::number(w,'f',6) + " кДж/м3");
     doc.insertImage(positionImg,5, *insertGraph("График зависимости девиаторного напряжения от\nотносительной осевой деформации","Осевая деформация ε * 10\u207B\u00B3", "Девиатор напряжений q, кПа.",XData,YData));
     positionImg = positionImg + height / 20 + 4;
 

@@ -38,14 +38,16 @@ public:
     {
             qDebug() << "Destruction vibroData";
     }
-    void push (double time, double verticalPressure_KPA,
+    void push (double time, QString step,double verticalPressure_KPA,
               double shearPressure_KPA, double cellPressure_KPA,
               double porePressure_KPA,double porePressureAux_kPA,
               double verticalDeform_mm, double shearDeform_mm,
               double cellVolume_mm3, double poreVolume_mm3,
               int mode, double u0);
 
-    void normalizeData();
+    void normalizeData(bool isHight);
+    int setCountStepsHigh();
+    void cropHigh(QVector<stepVibro>::iterator beginCrop, QVector<stepVibro>::iterator endCrop);
 };
 
 

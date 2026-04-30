@@ -21,12 +21,14 @@ void stepVibro::calc()
 }
 
 
-stepVibro::stepVibro(double time, double verticalPressure_KPA, double shearPressure_KPA, double cellPressure_KPA, double porePressure_KPA, double porePressureAux_kPA, double verticalDeform_mm, double shearDeform_mm, double cellVolume_mm3, double poreVolume_mm3, int mode, double u0, double h0, double d0)
+stepVibro::stepVibro(double time, QString step, double verticalPressure_KPA, double shearPressure_KPA, double cellPressure_KPA, double porePressure_KPA, double porePressureAux_kPA, double verticalDeform_mm, double shearDeform_mm, double cellVolume_mm3, double poreVolume_mm3, int mode, double u0, double h0, double d0)
 {
     m_h0 = h0;
     m_d0 = d0;
     m_u0 = u0;
 
+
+    m_nameSteps = step;
     m_time = time;
     m_verticalPressure_kPa = verticalPressure_KPA;
     m_shearPressure_kPa = shearPressure_KPA;

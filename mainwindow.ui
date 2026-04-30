@@ -31,7 +31,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="seismic">
        <attribute name="title">
@@ -551,7 +551,7 @@
                <string> Гц.</string>
               </property>
               <property name="maximum">
-               <double>10.000000000000000</double>
+               <double>100.000000000000000</double>
               </property>
               <property name="singleStep">
                <double>0.100000000000000</double>
